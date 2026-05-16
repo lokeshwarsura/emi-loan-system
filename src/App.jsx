@@ -13,6 +13,10 @@ function App() {
   const [fromMonth, setFromMonth] = useState("");
   const [toMonth, setToMonth] = useState("");
 
+  // Original EMI
+  const [originalEMI, setOriginalEMI] =
+    useState(0);
+
   // EMI Formula
   const calculateEMI = (P, annualRate, N) => {
     const R = annualRate / 12 / 100;
@@ -33,6 +37,9 @@ function App() {
       interestRate,
       tenure
     );
+
+    // Save Original EMI
+    setOriginalEMI(emi);
 
     let data = [];
 
@@ -151,7 +158,7 @@ function App() {
       (sum, row) =>
         sum +
         (row.status === "Overdue"
-          ? row.emi
+          ? row.balance + row.emi
           : row.balance),
       0
     );
@@ -282,7 +289,7 @@ function App() {
               </h3>
 
               <p className="text-3xl font-bold text-blue-600">
-                ₹{schedule[0].emi}
+                ₹{originalEMI}
               </p>
             </div>
 
@@ -383,6 +390,11 @@ function App() {
               <thead className="bg-blue-600 text-white">
 
                 <tr>
+
+                  <th className="p-3">
+                    Sl. No
+                  </th>
+
                   <th className="p-3">
                     Month
                   </th>
@@ -410,6 +422,7 @@ function App() {
                   <th className="p-3">
                     Status
                   </th>
+
                 </tr>
 
               </thead>
@@ -431,6 +444,10 @@ function App() {
                         key={row.id}
                         className="text-center border-b"
                       >
+
+                        <td className="p-3">
+                          {row.id}
+                        </td>
 
                         <td className="p-3">
                           {row.month}
