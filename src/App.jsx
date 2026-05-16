@@ -180,6 +180,23 @@ function App() {
       0
     );
 
+  // Total Overdue Amount
+  const totalOverdueAmount =
+    schedule.reduce(
+      (sum, row) =>
+        row.status === "Overdue"
+          ? sum + Number(row.emi)
+          : sum,
+      0
+    );
+
+  // Overdue Months Count
+  const overdueMonths =
+    schedule.filter(
+      (row) =>
+        row.status === "Overdue"
+    ).length;
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
 
@@ -281,8 +298,9 @@ function App() {
       {schedule.length > 0 && (
         <>
 
-          <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <div className="grid md:grid-cols-5 gap-4 mb-8">
 
+            {/* Monthly EMI */}
             <div className="bg-white p-5 rounded-2xl shadow">
               <h3 className="text-gray-500">
                 Monthly EMI
@@ -293,6 +311,7 @@ function App() {
               </p>
             </div>
 
+            {/* Outstanding */}
             <div className="bg-white p-5 rounded-2xl shadow">
               <h3 className="text-gray-500">
                 Outstanding Balance
@@ -303,6 +322,7 @@ function App() {
               </p>
             </div>
 
+            {/* Interest */}
             <div className="bg-white p-5 rounded-2xl shadow">
               <h3 className="text-gray-500">
                 Total Interest
@@ -313,6 +333,7 @@ function App() {
               </p>
             </div>
 
+            {/* Paid */}
             <div className="bg-white p-5 rounded-2xl shadow">
               <h3 className="text-gray-500">
                 Total Paid
@@ -321,6 +342,24 @@ function App() {
               <p className="text-3xl font-bold text-purple-600">
                 ₹{totalPaid}
               </p>
+            </div>
+
+            {/* Overdue Summary */}
+            <div className="bg-white p-5 rounded-2xl shadow">
+
+              <h3 className="text-gray-500">
+                Overdue Summary
+              </h3>
+
+              <p className="text-2xl font-bold text-orange-600">
+                ₹{totalOverdueAmount}
+              </p>
+
+              <p className="text-sm text-gray-500 mt-2">
+                {overdueMonths} Month(s)
+                Overdue
+              </p>
+
             </div>
 
           </div>
