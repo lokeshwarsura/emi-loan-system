@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 function App() {
 
+  // LOAN DETAILS
   const [loanAmount, setLoanAmount] =
     useState(100000);
 
@@ -12,15 +13,32 @@ function App() {
     useState(12);
 
   const [startMonth, setStartMonth] =
-    useState("2024-02-01");
+    useState("2025-01-01");
 
+  // MEMBER DETAILS
+  const [memberName, setMemberName] =
+    useState("");
+
+  const [bacNo, setBacNo] =
+    useState("");
+
+  const [caseNo, setCaseNo] =
+    useState("");
+
+  const [loanType, setLoanType] =
+    useState("");
+
+  const [unit, setUnit] =
+    useState("");
+
+  // SCHEDULE
   const [schedule, setSchedule] =
     useState([]);
 
   const [originalEMI, setOriginalEMI] =
     useState(0);
 
-  // FILTER STATES
+  // FILTERS
   const [fromMonth, setFromMonth] =
     useState("");
 
@@ -53,7 +71,7 @@ function App() {
     return Math.round(emi);
   };
 
-  // GENERATE EMI SCHEDULE
+  // GENERATE SCHEDULE
   const generateSchedule = () => {
 
     let balance =
@@ -139,6 +157,11 @@ function App() {
             newBalance
           ),
 
+        totalOS:
+          Math.round(
+            newBalance
+          ),
+
         status: "Paid",
       });
 
@@ -162,81 +185,14 @@ function App() {
     updated[index].emi =
       Number(value);
 
-    let balance =
-      index === 0
-        ? Number(
-            loanAmount
-          )
-        : Number(
-            updated[
-              index - 1
-            ].balance
-          );
-
-    for (
-      let i = index;
-      i < updated.length;
-      i++
-    ) {
-
-      const emi =
-        Number(
-          updated[i].emi
-        );
-
-      const interest =
-        Math.round(
-          (balance *
-            interestRate) /
-            12 /
-            100
-        );
-
-      const principal =
-        emi > interest
-          ? emi -
-            interest
-          : 0;
-
-      const newBalance =
-        emi > interest
-          ? Math.max(
-              0,
-              balance -
-                principal
-            )
-          : balance;
-
-      updated[
-        i
-      ].openingBalance =
-        Math.round(
-          balance
-        );
-
-      updated[i].interest =
-        interest;
-
-      updated[
-        i
-      ].principal =
-        principal;
-
-      updated[i].balance =
-        Math.round(
-          newBalance
-        );
-
-      balance =
-        newBalance;
-    }
-
-    setSchedule(updated);
+    recalculateSchedule(
+      updated
+    );
   };
 
-  // STATUS LOGIC
+  // STATUS CHANGE
   const handleStatusChange = (
-    originalIndex,
+    index,
     value
   ) => {
 
@@ -244,11 +200,23 @@ function App() {
       ...schedule,
     ];
 
-    updated[
-      originalIndex
-    ].status = value;
+    updated[index].status =
+      value;
+
+    recalculateSchedule(
+      updated
+    );
+  };
+
+  // RECALCULATE FULL SCHEDULE
+  const recalculateSchedule = (
+    updated
+  ) => {
 
     let previousDue = 0;
+
+    let previousBalance =
+      Number(loanAmount);
 
     for (
       let i = 0;
@@ -259,17 +227,19 @@ function App() {
       const row =
         updated[i];
 
-      const previousBalance =
-        i === 0
-          ? Number(
-              loanAmount
-            )
-          : updated[
-              i - 1
-            ].balance;
+      row.openingBalance =
+        previousBalance;
 
-      const currentInterest =
-        row.interest;
+      const interest =
+        Math.round(
+          (previousBalance *
+            interestRate) /
+            12 /
+            100
+        );
+
+      row.interest =
+        interest;
 
       // PAID
       if (
@@ -283,27 +253,27 @@ function App() {
 
         row.principal =
           row.emi -
-          currentInterest;
+          interest;
 
         row.balance =
-          previousBalance -
-          row.principal;
+          Math.max(
+            0,
+            previousBalance -
+              row.principal
+          );
 
         previousDue = 0;
       }
 
-      // PENDING
-      else if (
-        row.status ===
-        "Pending"
-      ) {
+      // PENDING / OVERDUE
+      else {
 
         row.carryForwardDue =
           previousDue;
 
         row.interestDue =
           previousDue +
-          currentInterest;
+          interest;
 
         row.principal = 0;
 
@@ -314,27 +284,12 @@ function App() {
           row.interestDue;
       }
 
-      // OVERDUE
-      else if (
-        row.status ===
-        "Overdue"
-      ) {
+      row.totalOS =
+        row.balance +
+        row.interestDue;
 
-        row.carryForwardDue =
-          previousDue;
-
-        row.interestDue =
-          previousDue +
-          currentInterest;
-
-        row.principal = 0;
-
-        row.balance =
-          previousBalance;
-
-        previousDue =
-          row.interestDue;
-      }
+      previousBalance =
+        row.balance;
     }
 
     setSchedule(updated);
@@ -372,15 +327,6 @@ function App() {
     });
 
   // TOTALS
-  const totalOutstanding =
-    filteredSchedule.reduce(
-      (sum, row) =>
-        sum +
-        row.balance +
-        row.interestDue,
-      0
-    );
-
   const totalInterest =
     filteredSchedule.reduce(
       (sum, row) =>
@@ -392,11 +338,10 @@ function App() {
   const totalPaid =
     filteredSchedule.reduce(
       (sum, row) =>
-        sum +
-        (row.status ===
+        row.status ===
         "Paid"
-          ? row.emi
-          : 0),
+          ? sum + row.emi
+          : sum,
       0
     );
 
@@ -411,24 +356,98 @@ function App() {
   const overdueMonths =
     filteredSchedule.filter(
       (row) =>
-        row.status ===
-          "Overdue" ||
-        row.status ===
-          "Pending"
+        row.status !==
+        "Paid"
     ).length;
+
+  const lastBalance =
+    filteredSchedule.length >
+    0
+      ? filteredSchedule[
+          filteredSchedule
+            .length - 1
+        ].totalOS
+      : 0;
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
 
       {/* TITLE */}
       <h1 className="text-4xl font-bold text-center text-blue-700 mb-8">
-        EMI & Outstanding
-        Loan Management
-        System
+        Loan Account Statement
       </h1>
 
+      {/* TOP SUMMARY */}
+      <div className="bg-white rounded-2xl shadow p-6 mb-8">
+
+        <div className="grid md:grid-cols-6 gap-4 text-center">
+
+          <div>
+            <p className="font-semibold text-gray-500">
+              Sanctioned Amount
+            </p>
+
+            <p className="text-2xl font-bold text-blue-700">
+              ₹{loanAmount}
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold text-gray-500">
+              EMI
+            </p>
+
+            <p className="text-2xl font-bold text-blue-700">
+              ₹{originalEMI}
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold text-gray-500">
+              Int. Due
+            </p>
+
+            <p className="text-2xl font-bold text-red-600">
+              ₹{totalOverdue}
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold text-gray-500">
+              ROI
+            </p>
+
+            <p className="text-2xl font-bold text-blue-700">
+              {interestRate}%
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold text-gray-500">
+              EMI Start
+            </p>
+
+            <p className="text-xl font-bold text-blue-700">
+              {startMonth}
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold text-gray-500">
+              Outstanding
+            </p>
+
+            <p className="text-2xl font-bold text-purple-700">
+              ₹{lastBalance}
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
       {/* LOAN DETAILS */}
-      <div className="bg-white p-6 rounded-2xl shadow mb-8">
+      <div className="bg-white rounded-2xl shadow p-6 mb-8">
 
         <h2 className="text-2xl font-bold mb-4">
           Loan Details
@@ -436,87 +455,52 @@ function App() {
 
         <div className="grid md:grid-cols-4 gap-4">
 
-          <div>
+          <input
+            type="number"
+            placeholder="Loan Amount"
+            value={loanAmount}
+            onChange={(e) =>
+              setLoanAmount(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
-            <label className="block font-semibold mb-2">
-              Loan Amount
-            </label>
+          <input
+            type="number"
+            placeholder="Interest Rate"
+            value={interestRate}
+            onChange={(e) =>
+              setInterestRate(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
-            <input
-              type="number"
-              value={
-                loanAmount
-              }
-              onChange={(e) =>
-                setLoanAmount(
-                  e.target.value
-                )
-              }
-              className="w-full border p-3 rounded-xl"
-            />
+          <input
+            type="number"
+            placeholder="Tenure"
+            value={tenure}
+            onChange={(e) =>
+              setTenure(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
-          </div>
-
-          <div>
-
-            <label className="block font-semibold mb-2">
-              Interest Rate
-            </label>
-
-            <input
-              type="number"
-              value={
-                interestRate
-              }
-              onChange={(e) =>
-                setInterestRate(
-                  e.target.value
-                )
-              }
-              className="w-full border p-3 rounded-xl"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="block font-semibold mb-2">
-              Tenure
-            </label>
-
-            <input
-              type="number"
-              value={tenure}
-              onChange={(e) =>
-                setTenure(
-                  e.target.value
-                )
-              }
-              className="w-full border p-3 rounded-xl"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="block font-semibold mb-2">
-              Start Date
-            </label>
-
-            <input
-              type="date"
-              value={
-                startMonth
-              }
-              onChange={(e) =>
-                setStartMonth(
-                  e.target.value
-                )
-              }
-              className="w-full border p-3 rounded-xl"
-            />
-
-          </div>
+          <input
+            type="date"
+            value={startMonth}
+            onChange={(e) =>
+              setStartMonth(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
         </div>
 
@@ -532,394 +516,355 @@ function App() {
 
       </div>
 
-      {/* DASHBOARD */}
-      {schedule.length > 0 && (
-        <>
+      {/* MEMBER DETAILS */}
+      <div className="bg-white rounded-2xl shadow p-6 mb-8">
 
-          <div className="grid md:grid-cols-5 gap-4 mb-8">
+        <h2 className="text-2xl font-bold mb-4">
+          Member Details
+        </h2>
 
-            <div className="bg-white p-5 rounded-2xl shadow">
+        <div className="grid md:grid-cols-5 gap-4">
 
-              <h3 className="text-gray-500">
-                Monthly EMI
-              </h3>
+          <input
+            type="text"
+            placeholder="Member Name"
+            value={memberName}
+            onChange={(e) =>
+              setMemberName(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
-              <p className="text-3xl font-bold text-blue-600">
-                ₹{
-                  originalEMI
-                }
-              </p>
+          <input
+            type="text"
+            placeholder="BAC No"
+            value={bacNo}
+            onChange={(e) =>
+              setBacNo(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
-            </div>
+          <input
+            type="text"
+            placeholder="Case No"
+            value={caseNo}
+            onChange={(e) =>
+              setCaseNo(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
-            <div className="bg-white p-5 rounded-2xl shadow">
+          <input
+            type="text"
+            placeholder="Loan Type"
+            value={loanType}
+            onChange={(e) =>
+              setLoanType(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
 
-              <h3 className="text-gray-500">
-                Outstanding
+          <input
+            type="text"
+            placeholder="Unit"
+            value={unit}
+            onChange={(e) =>
+              setUnit(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          />
+
+        </div>
+
+      </div>
+
+      {/* FILTER */}
+      <div className="bg-white rounded-2xl shadow p-6 mb-8">
+
+        <h2 className="text-2xl font-bold mb-4">
+          Filter Time Period
+        </h2>
+
+        <div className="grid md:grid-cols-2 gap-4">
+
+          <select
+            value={fromMonth}
+            onChange={(e) =>
+              setFromMonth(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          >
+
+            <option value="">
+              Select From Month
+            </option>
+
+            {schedule.map((row) => (
+
+              <option
+                key={row.id}
+                value={row.month}
+              >
+                {row.month}
+              </option>
+
+            ))}
+
+          </select>
+
+          <select
+            value={toMonth}
+            onChange={(e) =>
+              setToMonth(
+                e.target.value
+              )
+            }
+            className="border p-3 rounded-xl"
+          >
+
+            <option value="">
+              Select To Month
+            </option>
+
+            {schedule.map((row) => (
+
+              <option
+                key={row.id}
+                value={row.month}
+              >
+                {row.month}
+              </option>
+
+            ))}
+
+          </select>
+
+        </div>
+
+        {fromMonth &&
+          toMonth && (
+
+            <button
+              onClick={() => {
+
+                setFromMonth("");
+                setToMonth("");
+
+              }}
+              className="mt-4 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl"
+            >
+              Back To Full
+              Schedule
+            </button>
+
+          )}
+
+      </div>
+
+      {/* TABLE */}
+      <div className="overflow-x-auto bg-white rounded-2xl shadow">
+
+        <table className="w-full text-center">
+
+          <thead className="bg-blue-600 text-white">
+
+            <tr>
+
+              <th className="p-4">
+                Sl. No
+              </th>
+
+              <th className="p-4">
+                Month
+              </th>
+
+              <th className="p-4">
+                Opening Balance
+              </th>
+
+              <th className="p-4">
+                EMI
+              </th>
+
+              <th className="p-4">
+                Principal
+              </th>
+
+              <th className="p-4">
+                Interest
+              </th>
+
+              <th className="p-4">
+                Interest Due
+              </th>
+
+              <th className="p-4">
                 Balance
-              </h3>
+              </th>
 
-              <p className="text-3xl font-bold text-red-600">
-                ₹{
-                  totalOutstanding
-                }
-              </p>
+              <th className="p-4">
+                Total O/S
+              </th>
 
-            </div>
+              <th className="p-4">
+                Status
+              </th>
 
-            <div className="bg-white p-5 rounded-2xl shadow">
+            </tr>
 
-              <h3 className="text-gray-500">
-                Total Interest
-              </h3>
+          </thead>
 
-              <p className="text-3xl font-bold text-green-600">
-                ₹{
-                  totalInterest
-                }
-              </p>
+          <tbody>
 
-            </div>
+            {filteredSchedule.map(
+              (
+                row,
+                index
+              ) => {
 
-            <div className="bg-white p-5 rounded-2xl shadow">
+                const originalIndex =
+                  schedule.findIndex(
+                    (r) =>
+                      r.id ===
+                      row.id
+                  );
 
-              <h3 className="text-gray-500">
-                Total Paid
-              </h3>
+                return (
 
-              <p className="text-3xl font-bold text-purple-600">
-                ₹{
-                  totalPaid
-                }
-              </p>
-
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl shadow">
-
-              <h3 className="text-gray-500">
-                Overdue
-                Summary
-              </h3>
-
-              <p className="text-2xl font-bold text-orange-600">
-                ₹{
-                  totalOverdue
-                }
-              </p>
-
-              <p className="text-sm text-gray-500 mt-2">
-                {
-                  overdueMonths
-                }{" "}
-                Month(s)
-                Due
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* FILTER SECTION */}
-          <div className="bg-white p-6 rounded-2xl shadow mb-8">
-
-            <h2 className="text-2xl font-bold mb-4">
-              Filter Time Period
-            </h2>
-
-            <div className="grid md:grid-cols-2 gap-4">
-
-              {/* FROM */}
-              <select
-                className="p-3 border rounded-xl"
-                value={fromMonth}
-                onChange={(e) =>
-                  setFromMonth(
-                    e.target.value
-                  )
-                }
-              >
-
-                <option value="">
-                  Select From Month
-                </option>
-
-                {schedule.map((row) => (
-
-                  <option
+                  <tr
                     key={row.id}
-                    value={row.month}
+                    className="border-b"
                   >
-                    {row.month}
-                  </option>
 
-                ))}
+                    <td className="p-4">
+                      {row.id}
+                    </td>
 
-              </select>
+                    <td className="p-4">
+                      {row.month}
+                    </td>
 
-              {/* TO */}
-              <select
-                className="p-3 border rounded-xl"
-                value={toMonth}
-                onChange={(e) =>
-                  setToMonth(
-                    e.target.value
-                  )
-                }
-              >
+                    <td className="p-4">
+                      ₹{
+                        row.openingBalance
+                      }
+                    </td>
 
-                <option value="">
-                  Select To Month
-                </option>
+                    <td className="p-4">
 
-                {schedule.map((row) => (
+                      <input
+                        type="number"
+                        value={row.emi}
+                        onChange={(
+                          e
+                        ) =>
+                          updateEMI(
+                            originalIndex,
+                            e
+                              .target
+                              .value
+                          )
+                        }
+                        className="border p-2 rounded-lg w-24"
+                      />
 
-                  <option
-                    key={row.id}
-                    value={row.month}
-                  >
-                    {row.month}
-                  </option>
+                    </td>
 
-                ))}
+                    <td className="p-4">
+                      ₹{
+                        row.principal
+                      }
+                    </td>
 
-              </select>
+                    <td className="p-4">
+                      ₹{
+                        row.interest
+                      }
+                    </td>
 
-            </div>
+                    <td className="p-4 text-red-600 font-bold">
+                      ₹{
+                        row.interestDue
+                      }
+                    </td>
 
-            {/* BACK BUTTON */}
-            {fromMonth &&
-              toMonth && (
+                    <td className="p-4 text-blue-700 font-bold">
+                      ₹{
+                        row.balance
+                      }
+                    </td>
 
-                <div className="mt-4">
+                    <td className="p-4 text-pink-600 font-bold">
+                      ₹{
+                        row.totalOS
+                      }
+                    </td>
 
-                  <button
-                    onClick={() => {
+                    <td className="p-4">
 
-                      setFromMonth("");
-                      setToMonth("");
-
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl"
-                  >
-                    Back To Full
-                    Schedule
-                  </button>
-
-                </div>
-
-              )}
-
-          </div>
-
-          {/* TABLE */}
-          <div className="overflow-x-auto bg-white rounded-2xl shadow">
-
-            <table className="w-full">
-
-              <thead className="bg-blue-600 text-white">
-
-                <tr>
-
-                  <th className="p-4">
-                    Sl. No
-                  </th>
-
-                  <th className="p-4">
-                    Month
-                  </th>
-
-                  <th className="p-4">
-                    Opening
-                    Balance
-                  </th>
-
-                  <th className="p-4">
-                    EMI
-                  </th>
-
-                  <th className="p-4">
-                    Principal
-                  </th>
-
-                  <th className="p-4">
-                    Interest
-                  </th>
-
-                  <th className="p-4">
-                    Carry
-                    Forward
-                    Due
-                  </th>
-
-                  <th className="p-4">
-                    Interest
-                    Due
-                  </th>
-
-                  <th className="p-4">
-                    Outstanding
-                  </th>
-
-                  <th className="p-4">
-                    Status
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {filteredSchedule.map(
-                  (
-                    row,
-                    index
-                  ) => {
-
-                    const originalIndex =
-                      schedule.findIndex(
-                        (r) =>
-                          r.id ===
-                          row.id
-                      );
-
-                    return (
-
-                      <tr
-                        key={row.id}
-                        className="text-center border-b"
+                      <select
+                        value={
+                          row.status
+                        }
+                        onChange={(
+                          e
+                        ) =>
+                          handleStatusChange(
+                            originalIndex,
+                            e
+                              .target
+                              .value
+                          )
+                        }
+                        className="border p-2 rounded-lg"
                       >
 
-                        <td className="p-4">
-                          {row.id}
-                        </td>
+                        <option>
+                          Paid
+                        </option>
 
-                        <td className="p-4">
-                          {
-                            row.month
-                          }
-                        </td>
+                        <option>
+                          Pending
+                        </option>
 
-                        <td className="p-4">
-                          ₹
-                          {
-                            row.openingBalance
-                          }
-                        </td>
+                        <option>
+                          Overdue
+                        </option>
 
-                        {/* EMI */}
-                        <td className="p-4">
+                      </select>
 
-                          <input
-                            type="number"
-                            value={
-                              row.emi
-                            }
-                            className="border p-2 rounded-lg w-24"
-                            onChange={(
-                              e
-                            ) =>
-                              updateEMI(
-                                originalIndex,
-                                e
-                                  .target
-                                  .value
-                              )
-                            }
-                          />
+                    </td>
 
-                        </td>
+                  </tr>
 
-                        {/* PRINCIPAL */}
-                        <td className="p-4">
-                          ₹
-                          {
-                            row.principal
-                          }
-                        </td>
+                );
+              }
+            )}
 
-                        {/* INTEREST */}
-                        <td className="p-4">
-                          ₹
-                          {
-                            row.interest
-                          }
-                        </td>
+          </tbody>
 
-                        {/* CARRY FORWARD */}
-                        <td className="p-4 text-orange-600 font-bold">
-                          ₹
-                          {
-                            row.carryForwardDue
-                          }
-                        </td>
+        </table>
 
-                        {/* INTEREST DUE */}
-                        <td className="p-4 text-red-600 font-bold">
-                          ₹
-                          {
-                            row.interestDue
-                          }
-                        </td>
+      </div>
 
-                        {/* OUTSTANDING */}
-                        <td className="p-4 font-bold text-blue-600">
-                          ₹
-                          {row.balance +
-                            row.interestDue}
-                        </td>
-
-                        {/* STATUS */}
-                        <td className="p-4">
-
-                          <select
-                            value={
-                              row.status
-                            }
-                            onChange={(
-                              e
-                            ) =>
-                              handleStatusChange(
-                                originalIndex,
-                                e
-                                  .target
-                                  .value
-                              )
-                            }
-                            className="border p-2 rounded-lg"
-                          >
-
-                            <option>
-                              Paid
-                            </option>
-
-                            <option>
-                              Pending
-                            </option>
-
-                            <option>
-                              Overdue
-                            </option>
-
-                          </select>
-
-                        </td>
-
-                      </tr>
-
-                    );
-                  }
-                )}
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </>
-      )}
+      {/* FINAL BALANCE */}
+      <div className="text-right text-3xl font-bold text-blue-700 mt-8">
+        Outstanding Balance :
+        ₹{lastBalance}
+      </div>
 
     </div>
   );
