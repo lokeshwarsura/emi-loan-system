@@ -17,22 +17,6 @@ function App() {
   const [startMonth, setStartMonth] =
     useState("2025-01-01");
 
-  // MEMBER DETAILS
-  const [memberName, setMemberName] =
-    useState("");
-
-  const [bacNo, setBacNo] =
-    useState("");
-
-  const [caseNo, setCaseNo] =
-    useState("");
-
-  const [loanType, setLoanType] =
-    useState("");
-
-  const [unit, setUnit] =
-    useState("");
-
   // EMI SCHEDULE
   const [schedule, setSchedule] =
     useState([]);
@@ -40,14 +24,13 @@ function App() {
   const [originalEMI, setOriginalEMI] =
     useState(0);
 
-  // RANGE FILTER
+  // FILTERS
   const [fromMonth, setFromMonth] =
     useState("");
 
   const [toMonth, setToMonth] =
     useState("");
 
-  // RANDOM FILTER
   const [selectedMonths, setSelectedMonths] =
     useState([""]);
 
@@ -236,7 +219,7 @@ function App() {
     );
   };
 
-  // RECALCULATE SCHEDULE
+  // RECALCULATE
   const recalculateSchedule = (
     updated
   ) => {
@@ -269,7 +252,6 @@ function App() {
       row.interest =
         interest;
 
-      // PAID
       if (
         row.status ===
         "Paid"
@@ -302,7 +284,6 @@ function App() {
         previousDue = 0;
       }
 
-      // PENDING / OVERDUE
       else {
 
         row.carryForwardDue =
@@ -520,7 +501,6 @@ function App() {
   const filteredSchedule =
     schedule.filter((row) => {
 
-      // RANGE FILTER
       let rangeMatch = true;
 
       if (
@@ -554,7 +534,6 @@ function App() {
             toIndex;
       }
 
-      // CUSTOM FILTER
       let customMatch = true;
 
       if (
@@ -684,7 +663,6 @@ function App() {
 
           <input
             type="number"
-            placeholder="Loan Amount"
             value={loanAmount}
             onChange={(e) =>
               setLoanAmount(
@@ -696,7 +674,6 @@ function App() {
 
           <input
             type="number"
-            placeholder="Interest Rate"
             value={interestRate}
             onChange={(e) =>
               setInterestRate(
@@ -708,7 +685,6 @@ function App() {
 
           <input
             type="number"
-            placeholder="Tenure"
             value={tenure}
             onChange={(e) =>
               setTenure(
@@ -742,14 +718,14 @@ function App() {
 
       </div>
 
-      {/* FILTER SECTION */}
+      {/* FILTERS */}
       <div className="bg-white rounded-2xl shadow p-6 mb-8">
 
         <h2 className="text-2xl font-bold mb-4">
           Loan Filters
         </h2>
 
-        {/* RANGE FILTER */}
+        {/* RANGE */}
         <div className="mb-8">
 
           <h3 className="text-xl font-semibold mb-4 text-blue-700">
@@ -820,7 +796,7 @@ function App() {
 
         </div>
 
-        {/* RANDOM FILTER */}
+        {/* CUSTOM FILTER */}
         <div>
 
           <h3 className="text-xl font-semibold mb-4 text-blue-700">
@@ -939,7 +915,7 @@ function App() {
 
       </div>
 
-      {/* EMI TABLE */}
+      {/* TABLE */}
       <div className="bg-white rounded-2xl shadow p-6 overflow-auto">
 
         <h2 className="text-2xl font-bold mb-4">
@@ -995,98 +971,105 @@ function App() {
           <tbody>
 
             {filteredSchedule.map(
-              (
-                row,
-                index
-              ) => (
+              (row) => {
 
-                <tr
-                  key={index}
-                  className="text-center"
-                >
+                const actualIndex =
+                  schedule.findIndex(
+                    (item) =>
+                      item.id ===
+                      row.id
+                  );
 
-                  <td className="border p-2">
-                    {row.month}
-                  </td>
+                return (
 
-                  <td className="border p-2">
-                    ₹{
-                      row.openingBalance
-                    }
-                  </td>
+                  <tr
+                    key={row.id}
+                    className="text-center"
+                  >
 
-                  <td className="border p-2">
+                    <td className="border p-2">
+                      {row.month}
+                    </td>
 
-                    <input
-                      type="number"
-                      value={row.emi}
-                      onChange={(e) =>
-                        updateEMI(
-                          index,
-                          e.target.value
-                        )
+                    <td className="border p-2">
+                      ₹{
+                        row.openingBalance
                       }
-                      className="border p-2 w-24 rounded"
-                    />
+                    </td>
 
-                  </td>
+                    <td className="border p-2">
 
-                  <td className="border p-2">
-                    ₹{row.principal}
-                  </td>
+                      <input
+                        type="number"
+                        value={row.emi}
+                        onChange={(e) =>
+                          updateEMI(
+                            actualIndex,
+                            e.target.value
+                          )
+                        }
+                        className="border p-2 w-24 rounded"
+                      />
 
-                  <td className="border p-2">
-                    ₹{row.interest}
-                  </td>
+                    </td>
 
-                  <td className="border p-2 text-red-600 font-bold">
-                    ₹{
-                      row.interestDue
-                    }
-                  </td>
+                    <td className="border p-2">
+                      ₹{row.principal}
+                    </td>
 
-                  <td className="border p-2">
-                    ₹{row.balance}
-                  </td>
+                    <td className="border p-2">
+                      ₹{row.interest}
+                    </td>
 
-                  <td className="border p-2">
-                    ₹{row.totalOS}
-                  </td>
-
-                  <td className="border p-2">
-
-                    <select
-                      value={
-                        row.status
+                    <td className="border p-2 text-red-600 font-bold">
+                      ₹{
+                        row.interestDue
                       }
-                      onChange={(e) =>
-                        handleStatusChange(
-                          index,
-                          e.target.value
-                        )
-                      }
-                      className="border p-2 rounded"
-                    >
+                    </td>
 
-                      <option value="Paid">
-                        Paid
-                      </option>
+                    <td className="border p-2">
+                      ₹{row.balance}
+                    </td>
 
-                      <option value="Pending">
-                        Pending
-                      </option>
+                    <td className="border p-2">
+                      ₹{row.totalOS}
+                    </td>
 
-                      <option value="Overdue">
-                        Overdue
-                      </option>
+                    <td className="border p-2">
 
-                    </select>
+                      <select
+                        value={
+                          row.status
+                        }
+                        onChange={(e) =>
+                          handleStatusChange(
+                            actualIndex,
+                            e.target.value
+                          )
+                        }
+                        className="border p-2 rounded"
+                      >
 
-                  </td>
+                        <option value="Paid">
+                          Paid
+                        </option>
 
-                </tr>
+                        <option value="Pending">
+                          Pending
+                        </option>
 
-              )
+                        <option value="Overdue">
+                          Overdue
+                        </option>
+
+                      </select>
+
+                    </td>
+
+                  </tr>
+
+                );
+              }
             )}
 
           </tbody>
