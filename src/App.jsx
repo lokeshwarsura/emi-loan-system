@@ -4,510 +4,265 @@ import autoTable from "jspdf-autotable";
 
 function App() {
 
-  // LOAN DETAILS
-  const [loanAmount, setLoanAmount] =
-    useState(100000);
+  const [loanAmount, setLoanAmount] = useState(100000);
+  const [interestRate, setInterestRate] = useState(11);
+  const [tenure, setTenure] = useState(12);
+  const [startMonth, setStartMonth] = useState("2025-01-01");
 
-  const [interestRate, setInterestRate] =
-    useState(11);
+  const [schedule, setSchedule] = useState([]);
+  const [originalEMI, setOriginalEMI] = useState(0);
 
-  const [tenure, setTenure] =
-    useState(12);
+  const [fromMonth, setFromMonth] = useState("");
+  const [toMonth, setToMonth] = useState("");
+  const [rangeEMI, setRangeEMI] = useState("");
 
-  const [startMonth, setStartMonth] =
-    useState("2025-01-01");
+  const [selectedMonths, setSelectedMonths] = useState([""]);
 
-  // EMI SCHEDULE
-  const [schedule, setSchedule] =
-    useState([]);
-    
-  const [rangeEMI, setRangeEMI] =
-  useState("");
+  // EMI CALCULATION
+  const calculateEMI = (P, annualRate, N) => {
 
-  const [originalEMI, setOriginalEMI] =
-    useState(0);
-
-  // FILTERS
-  const [fromMonth, setFromMonth] =
-    useState("");
-
-  const [toMonth, setToMonth] =
-    useState("");
-
-  const [selectedMonths, setSelectedMonths] =
-    useState([""]);
-
-  // EMI FORMULA
-  const calculateEMI = (
-    P,
-    annualRate,
-    N
-  ) => {
-
-    const R =
-      annualRate / 12 / 100;
+    const R = annualRate / 12 / 100;
 
     const emi =
-      (P *
-        R *
-        Math.pow(
-          1 + R,
-          N
-        )) /
-      (Math.pow(
-        1 + R,
-        N
-      ) -
-        1);
+      (P * R * Math.pow(1 + R, N)) /
+      (Math.pow(1 + R, N) - 1);
 
     return Math.round(emi);
   };
 
-  // GENERATE EMI SCHEDULE
+  // GENERATE SCHEDULE
   const generateSchedule = () => {
 
-    let balance =
-      Number(loanAmount);
+    let balance = Number(loanAmount);
 
-    const emi =
-      calculateEMI(
-        balance,
-        interestRate,
-        tenure
-      );
+    const emi = calculateEMI(
+      balance,
+      interestRate,
+      tenure
+    );
 
     setOriginalEMI(emi);
 
-    let data = [];
+    const data = [];
 
-    const start =
-      new Date(startMonth);
+    const start = new Date(startMonth);
 
-    for (
-      let i = 0;
-      i < tenure;
-      i++
-    ) {
+    for (let i = 0; i < tenure; i++) {
 
-      const interest =
-        Math.round(
-          (balance *
-            interestRate) /
-            12 /
-            100
-        );
-
-      const principal =
-        emi - interest;
-
-      const newBalance =
-        Math.max(
-          0,
-          balance -
-            principal
-        );
-
-      const monthDate =
-        new Date(start);
-
-      monthDate.setMonth(
-        start.getMonth() +
-          i
+      const interest = Math.round(
+        (balance * interestRate) /
+          12 /
+          100
       );
+
+      const principal = emi - interest;
+
+      const newBalance = Math.max(
+        0,
+        balance - principal
+      );
+
+      const monthDate = new Date(start);
+
+      monthDate.setMonth(start.getMonth() + i);
 
       data.push({
         id: i + 1,
 
-        month:
-          monthDate.toLocaleString(
-            "default",
-            {
-              month:
-                "short",
-              year:
-                "2-digit",
-            }
-          ),
+        month: monthDate.toLocaleString(
+          "default",
+          {
+            month: "short",
+            year: "2-digit",
+          }
+        ),
 
-        openingBalance:
-          Math.round(
-            balance
-          ),
-
+        openingBalance: Math.round(balance),
         emi,
-
         principal,
-
         interest,
-
-        carryForwardDue: 0,
-
         interestDue: 0,
-
-        balance:
-          Math.round(
-            newBalance
-          ),
-
-        totalOS:
-          Math.round(
-            newBalance
-          ),
-
+        balance: Math.round(newBalance),
+        totalOS: Math.round(newBalance),
         status: "Paid",
       });
 
-      balance =
-        newBalance;
+      balance = newBalance;
     }
 
     setSchedule(data);
   };
 
-  // UPDATE EMI
- // UPDATE EMI
-const updateEMI = (
-  index,
-  value
-) => {
-
-  const updated = [
-    ...schedule,
-  ];
-
-  const emiValue =
-    Number(value);
-
-  updated[index].emi =
-    emiValue;
-
-  // AUTO STATUS CHANGE
-  if (emiValue === 0) {
-
-    updated[index].status =
-      "Overdue";
-  }
-
-  else {
-
-    if (
-      updated[index]
-        .status ===
-      "Overdue"
-    ) {
-
-      updated[index].status =
-        "Paid";
-    }
-  }
-
   // RECALCULATE
-  recalculateSchedule(
-    updated
-  );
-};
+  const recalculateSchedule = (updated) => {
 
-
-// APPLY EMI TO SELECTED RANGE
-const applyRangeEMI = () => {
-
-  // VALIDATION
-  if (
-    !fromMonth ||
-    !toMonth ||
-    !rangeEMI
-  ) {
-
-    alert(
-      "Select start month, end month and EMI"
-    );
-
-    return;
-  }
-
-  const updated = [
-    ...schedule,
-  ];
-
-  // FIND RANGE
-  const fromIndex =
-    updated.findIndex(
-      (r) =>
-        r.month ===
-        fromMonth
-    );
-
-  const toIndex =
-    updated.findIndex(
-      (r) =>
-        r.month ===
-        toMonth
-    );
-
-  // INVALID RANGE
-  if (
-    fromIndex === -1 ||
-    toIndex === -1
-  ) {
-
-    alert(
-      "Invalid range selected"
-    );
-
-    return;
-  }
-
-  // START > END
-  if (
-    fromIndex > toIndex
-  ) {
-
-    alert(
-      "Start month cannot be after end month"
-    );
-
-    return;
-  }
-
-  // APPLY EMI
-  for (
-    let i = fromIndex;
-    i <= toIndex;
-    i++
-  ) {
-
-    updated[i].emi =
-      Number(rangeEMI);
-  }
-
-  // RECALCULATE
-  recalculateSchedule(
-    updated
-  );
-
-  alert(
-    "Revised EMI applied successfully"
-  );
-};
-
-
-// APPLY EMI TO RANGE
-const applyRangeEMI = () => {
-
-  if (
-    !fromMonth ||
-    !toMonth ||
-    !rangeEMI
-  ) {
-
-    alert(
-      "Select range and EMI"
-    );
-
-    return;
-  }
-
-  const updated = [
-    ...schedule,
-  ];
-
-  const fromIndex =
-    updated.findIndex(
-      (r) =>
-        r.month ===
-        fromMonth
-    );
-
-  const toIndex =
-    updated.findIndex(
-      (r) =>
-        r.month ===
-        toMonth
-    );
-
-  if (
-    fromIndex === -1 ||
-    toIndex === -1
-  ) {
-
-    alert(
-      "Invalid range selected"
-    );
-
-    return;
-  }
-
-  for (
-    let i = fromIndex;
-    i <= toIndex;
-    i++
-  ) {
-
-    updated[i].emi =
-      Number(rangeEMI);
-  }
-
-  recalculateSchedule(
-    updated
-  );
-};
-
-  // RECALCULATE
-  const recalculateSchedule = (
-    updated
-  ) => {
-
+    let previousBalance = Number(loanAmount);
     let previousDue = 0;
 
-    let previousBalance =
-      Number(loanAmount);
+    for (let i = 0; i < updated.length; i++) {
 
-    for (
-      let i = 0;
-      i < updated.length;
-      i++
-    ) {
+      const row = updated[i];
 
-      const row =
-        updated[i];
+      row.openingBalance = previousBalance;
 
-      row.openingBalance =
-        previousBalance;
+      const interest = Math.round(
+        (previousBalance * interestRate) /
+          12 /
+          100
+      );
 
-      const interest =
-        Math.round(
-          (previousBalance *
-            interestRate) /
-            12 /
-            100
-        );
+      row.interest = interest;
 
-      row.interest =
-        interest;
+      if (row.status === "Paid") {
 
-      if (
-        row.status ===
-        "Paid"
-      ) {
-
-        row.carryForwardDue =
-          previousDue;
-
-        row.interestDue =
-          previousDue;
+        row.interestDue = previousDue;
 
         const effectiveEMI =
-          row.emi -
-          previousDue;
+          row.emi - previousDue;
 
         row.principal =
-          effectiveEMI >
-          interest
-            ? effectiveEMI -
-              interest
+          effectiveEMI > interest
+            ? effectiveEMI - interest
             : 0;
 
-        row.balance =
-          Math.max(
-            0,
-            previousBalance -
-              row.principal
-          );
+        row.balance = Math.max(
+          0,
+          previousBalance - row.principal
+        );
 
         previousDue = 0;
       }
 
       else {
 
-        row.carryForwardDue =
-          previousDue;
-
-        row.interestDue =
-          previousDue +
-          interest;
-
         row.principal = 0;
 
-        row.balance =
-          previousBalance;
+        row.balance = previousBalance;
 
-        previousDue =
-          row.interestDue;
+        row.interestDue = previousDue + interest;
+
+        previousDue = row.interestDue;
       }
 
       row.totalOS =
-        row.balance +
-        row.interestDue;
+        row.balance + row.interestDue;
 
-      previousBalance =
-        row.balance;
+      previousBalance = row.balance;
     }
 
     setSchedule(updated);
   };
 
-  // ADD MONTH
-  const addMonthBox = () => {
+  // UPDATE EMI
+  const updateEMI = (index, value) => {
 
+    const updated = [...schedule];
+
+    updated[index].emi = Number(value);
+
+    recalculateSchedule(updated);
+  };
+
+  // APPLY RANGE EMI
+  const applyRangeEMI = () => {
+
+    if (!fromMonth || !toMonth || !rangeEMI) {
+      alert("Select range and EMI");
+      return;
+    }
+
+    const updated = [...schedule];
+
+    const fromIndex = updated.findIndex(
+      (r) => r.month === fromMonth
+    );
+
+    const toIndex = updated.findIndex(
+      (r) => r.month === toMonth
+    );
+
+    if (
+      fromIndex === -1 ||
+      toIndex === -1
+    ) {
+      alert("Invalid range");
+      return;
+    }
+
+    for (
+      let i = fromIndex;
+      i <= toIndex;
+      i++
+    ) {
+      updated[i].emi = Number(rangeEMI);
+    }
+
+    recalculateSchedule(updated);
+  };
+
+  // STATUS CHANGE
+  const handleStatusChange = (
+    index,
+    value
+  ) => {
+
+    const updated = [...schedule];
+
+    updated[index].status = value;
+
+    recalculateSchedule(updated);
+  };
+
+  // ADD MONTH FILTER
+  const addMonthBox = () => {
     setSelectedMonths([
       ...selectedMonths,
       "",
     ]);
   };
 
-  // UPDATE MONTH
   const updateSelectedMonth = (
     index,
     value
   ) => {
 
-    const updated = [
-      ...selectedMonths,
-    ];
+    const updated = [...selectedMonths];
 
     updated[index] = value;
 
     setSelectedMonths(updated);
   };
 
-  // REMOVE MONTH
-  const removeMonthBox = (
-    index
-  ) => {
+  const removeMonthBox = (index) => {
 
-    const updated =
-      selectedMonths.filter(
-        (_, i) =>
-          i !== index
-      );
+    const updated = selectedMonths.filter(
+      (_, i) => i !== index
+    );
 
     setSelectedMonths(updated);
   };
 
-  // RESET FILTERS
+  // RESET
   const resetAllFilters = () => {
 
-    setSelectedMonths([
-      "",
-    ]);
-
+    setSelectedMonths([""]);
     setFromMonth("");
-
     setToMonth("");
+    setRangeEMI("");
   };
 
   // PRINT
   const handlePrint = () => {
-
     window.print();
   };
 
-  // EXPORT CSV
+  // CSV EXPORT
   const exportCSV = () => {
 
     const headers = [
+      "Sl No",
       "Month",
-      "Opening Balance",
+      "Opening",
       "EMI",
       "Principal",
       "Interest",
@@ -517,50 +272,39 @@ const applyRangeEMI = () => {
       "Status",
     ];
 
-    const rows =
-      filteredSchedule.map(
-        (row) => [
-          row.month,
-          row.openingBalance,
-          row.emi,
-          row.principal,
-          row.interest,
-          row.interestDue,
-          row.balance,
-          row.totalOS,
-          row.status,
-        ]
-      );
+    const rows = filteredSchedule.map(
+      (row, index) => [
+        index + 1,
+        row.month,
+        row.openingBalance,
+        row.emi,
+        row.principal,
+        row.interest,
+        row.interestDue,
+        row.balance,
+        row.totalOS,
+        row.status,
+      ]
+    );
 
     let csvContent =
-      headers.join(",") +
-      "\n";
+      headers.join(",") + "\n";
 
     rows.forEach((row) => {
-
-      csvContent +=
-        row.join(",") +
-        "\n";
+      csvContent += row.join(",") + "\n";
     });
 
-    const blob =
-      new Blob(
-        [csvContent],
-        {
-          type:
-            "text/csv;charset=utf-8;",
-        }
-      );
+    const blob = new Blob(
+      [csvContent],
+      {
+        type: "text/csv;charset=utf-8;",
+      }
+    );
 
-    const url =
-      URL.createObjectURL(
-        blob
-      );
+    const url = URL.createObjectURL(blob);
 
     const link =
-      document.createElement(
-        "a"
-      );
+      document.createElement("a");
 
     link.href = url;
 
@@ -569,22 +313,17 @@ const applyRangeEMI = () => {
       "loan_schedule.csv"
     );
 
-    document.body.appendChild(
-      link
-    );
+    document.body.appendChild(link);
 
     link.click();
 
-    document.body.removeChild(
-      link
-    );
+    document.body.removeChild(link);
   };
 
-  // EXPORT PDF
+  // PDF EXPORT
   const exportPDF = () => {
 
-    const doc =
-      new jsPDF();
+    const doc = new jsPDF();
 
     doc.setFontSize(18);
 
@@ -610,29 +349,23 @@ const applyRangeEMI = () => {
         "Status",
       ]],
 
-      body:
-        filteredSchedule.map(
-          (
-            row,
-            index
-          ) => [
-            index + 1,
-            row.month,
-            row.openingBalance,
-            row.emi,
-            row.principal,
-            row.interest,
-            row.interestDue,
-            row.balance,
-            row.totalOS,
-            row.status,
-          ]
-        ),
+      body: filteredSchedule.map(
+        (row, index) => [
+          index + 1,
+          row.month,
+          row.openingBalance,
+          row.emi,
+          row.principal,
+          row.interest,
+          row.interestDue,
+          row.balance,
+          row.totalOS,
+          row.status,
+        ]
+      ),
     });
 
-    doc.save(
-      "loan_schedule.pdf"
-    );
+    doc.save("loan_schedule.pdf");
   };
 
   // FILTER LOGIC
@@ -641,35 +374,24 @@ const applyRangeEMI = () => {
 
       let rangeMatch = true;
 
-      if (
-        fromMonth &&
-        toMonth
-      ) {
+      if (fromMonth && toMonth) {
 
         const currentIndex =
-          schedule.indexOf(
-            row
-          );
+          schedule.indexOf(row);
 
         const fromIndex =
           schedule.findIndex(
-            (r) =>
-              r.month ===
-              fromMonth
+            (r) => r.month === fromMonth
           );
 
         const toIndex =
           schedule.findIndex(
-            (r) =>
-              r.month ===
-              toMonth
+            (r) => r.month === toMonth
           );
 
         rangeMatch =
-          currentIndex >=
-            fromIndex &&
-          currentIndex <=
-            toIndex;
+          currentIndex >= fromIndex &&
+          currentIndex <= toIndex;
       }
 
       let customMatch = true;
@@ -677,8 +399,7 @@ const applyRangeEMI = () => {
       if (
         selectedMonths.some(
           (month) =>
-            month.trim() !==
-            ""
+            month.trim() !== ""
         )
       ) {
 
@@ -689,26 +410,21 @@ const applyRangeEMI = () => {
       }
 
       return (
-        rangeMatch &&
-        customMatch
+        rangeMatch && customMatch
       );
     });
 
-  // TOTALS
   const totalOverdue =
     filteredSchedule.reduce(
       (sum, row) =>
-        sum +
-        row.interestDue,
+        sum + row.interestDue,
       0
     );
 
   const lastBalance =
-    filteredSchedule.length >
-    0
+    filteredSchedule.length > 0
       ? filteredSchedule[
-          filteredSchedule
-            .length - 1
+          filteredSchedule.length - 1
         ].totalOS
       : 0;
 
@@ -716,7 +432,6 @@ const applyRangeEMI = () => {
 
     <div className="min-h-screen bg-gray-100 p-6">
 
-      {/* TITLE */}
       <h1 className="text-4xl font-bold text-center text-blue-700 mb-8">
         Loan Account Statement
       </h1>
@@ -846,9 +561,7 @@ const applyRangeEMI = () => {
         </div>
 
         <button
-          onClick={
-            generateSchedule
-          }
+          onClick={generateSchedule}
           className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl"
         >
           Generate EMI Schedule
@@ -864,132 +577,90 @@ const applyRangeEMI = () => {
         </h2>
 
         {/* RANGE FILTER */}
-     {/* RANGE FILTER */}
-<div className="mb-8">
+        <div className="mb-8">
 
-  <h3 className="text-xl font-semibold mb-4 text-blue-700">
-    Start To End Filter
-  </h3>
+          <h3 className="text-xl font-semibold mb-4 text-blue-700">
+            Start To End Filter
+          </h3>
 
-  <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
 
-    {/* START MONTH */}
-    <select
-      value={fromMonth}
-      onChange={(e) =>
-        setFromMonth(
-          e.target.value
-        )
-      }
-      className="border p-3 rounded-xl"
-    >
+            <select
+              value={fromMonth}
+              onChange={(e) =>
+                setFromMonth(
+                  e.target.value
+                )
+              }
+              className="border p-3 rounded-xl"
+            >
 
-      <option value="">
-        Select Start Month
-      </option>
+              <option value="">
+                Select Start Month
+              </option>
 
-      {schedule.map(
-        (row) => (
+              {schedule.map((row) => (
+                <option
+                  key={row.id}
+                  value={row.month}
+                >
+                  {row.month}
+                </option>
+              ))}
 
-          <option
-            key={row.id}
-            value={row.month}
-          >
-            {row.month}
-          </option>
+            </select>
 
-        )
-      )}
+            <select
+              value={toMonth}
+              onChange={(e) =>
+                setToMonth(
+                  e.target.value
+                )
+              }
+              className="border p-3 rounded-xl"
+            >
 
-    </select>
+              <option value="">
+                Select End Month
+              </option>
 
-    {/* END MONTH */}
-    <select
-      value={toMonth}
-      onChange={(e) =>
-        setToMonth(
-          e.target.value
-        )
-      }
-      className="border p-3 rounded-xl"
-    >
+              {schedule.map((row) => (
+                <option
+                  key={row.id}
+                  value={row.month}
+                >
+                  {row.month}
+                </option>
+              ))}
 
-      <option value="">
-        Select End Month
-      </option>
+            </select>
 
-      {schedule.map(
-        (row) => (
+          </div>
 
-          <option
-            key={row.id}
-            value={row.month}
-          >
-            {row.month}
-          </option>
+          <div className="mt-6 flex gap-4 flex-wrap">
 
-        )
-      )}
+            <input
+              type="number"
+              placeholder="Enter Revised EMI"
+              value={rangeEMI}
+              onChange={(e) =>
+                setRangeEMI(
+                  e.target.value
+                )
+              }
+              className="border p-3 rounded-xl w-64"
+            />
 
-    </select>
+            <button
+              onClick={applyRangeEMI}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl"
+            >
+              Apply EMI To Selected Range
+            </button>
 
-  </div>
+          </div>
 
-  {/* REVISED EMI SECTION */}
-  <div className="mt-6 flex gap-4 flex-wrap">
-
-    <input
-      type="number"
-      placeholder="Enter Revised EMI"
-      value={rangeEMI}
-      onChange={(e) =>
-        setRangeEMI(
-          e.target.value
-        )
-      }
-      className="border p-3 rounded-xl w-64"
-    />
-
-    <button
-      onClick={
-        applyRangeEMI
-      }
-      className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold"
-    >
-      Apply EMI To Selected Range
-    </button>
-
-  </div>
-
-</div>
-
-  {/* REVISED EMI */}
-  <div className="mt-6 flex gap-4 flex-wrap">
-
-    <input
-      type="number"
-      placeholder="Enter Revised EMI"
-      value={rangeEMI}
-      onChange={(e) =>
-        setRangeEMI(
-          e.target.value
-        )
-      }
-      className="border p-3 rounded-xl w-64"
-    />
-
-    <button
-      onClick={
-        applyRangeEMI
-      }
-      className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold"
-    >
-      Apply EMI To Selected Range
-    </button>
-
-  </div>
-
-</div>
+        </div>
 
         {/* RANDOM FILTER */}
         <div>
@@ -1001,10 +672,7 @@ const applyRangeEMI = () => {
           <div className="grid md:grid-cols-5 gap-4">
 
             {selectedMonths.map(
-              (
-                month,
-                index
-              ) => (
+              (month, index) => (
 
                 <div
                   key={index}
@@ -1024,14 +692,11 @@ const applyRangeEMI = () => {
                     className="border p-3 rounded-xl w-full"
                   />
 
-                  {selectedMonths.length >
-                    1 && (
+                  {selectedMonths.length > 1 && (
 
                     <button
                       onClick={() =>
-                        removeMonthBox(
-                          index
-                        )
+                        removeMonthBox(index)
                       }
                       className="bg-red-500 hover:bg-red-600 text-white px-3 rounded-xl"
                     >
@@ -1047,58 +712,45 @@ const applyRangeEMI = () => {
 
           </div>
 
-          {/* BUTTONS */}
           <div className="flex gap-4 mt-4 flex-wrap">
 
             <button
-              onClick={
-                addMonthBox
-              }
+              onClick={addMonthBox}
               className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl"
             >
               + Add Month
             </button>
 
             <button
-              onClick={
-                resetAllFilters
-              }
+              onClick={resetAllFilters}
               className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-xl"
             >
               Reset Filter
             </button>
 
             <button
-              onClick={
-                resetAllFilters
-              }
+              onClick={resetAllFilters}
               className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl"
             >
               Back To Full Schedule
             </button>
 
             <button
-              onClick={
-                handlePrint
-              }
+              onClick={handlePrint}
               className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl"
             >
               Print
             </button>
 
             <button
-              onClick={
-                exportCSV
-              }
+              onClick={exportCSV}
               className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-xl"
             >
               Export CSV
             </button>
 
             <button
-              onClick={
-                exportPDF
-              }
+              onClick={exportPDF}
               className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl"
             >
               Export PDF
@@ -1123,45 +775,16 @@ const applyRangeEMI = () => {
 
             <tr>
 
-              <th className="p-4">
-                Sl. No
-              </th>
-
-              <th className="p-4">
-                Month
-              </th>
-
-              <th className="p-4">
-                Opening Balance
-              </th>
-
-              <th className="p-4">
-                EMI
-              </th>
-
-              <th className="p-4">
-                Principal
-              </th>
-
-              <th className="p-4">
-                Interest
-              </th>
-
-              <th className="p-4">
-                Interest Due
-              </th>
-
-              <th className="p-4">
-                Balance
-              </th>
-
-              <th className="p-4">
-                Total O/S
-              </th>
-
-              <th className="p-4">
-                Status
-              </th>
+              <th className="p-4">Sl. No</th>
+              <th className="p-4">Month</th>
+              <th className="p-4">Opening Balance</th>
+              <th className="p-4">EMI</th>
+              <th className="p-4">Principal</th>
+              <th className="p-4">Interest</th>
+              <th className="p-4">Interest Due</th>
+              <th className="p-4">Balance</th>
+              <th className="p-4">Total O/S</th>
+              <th className="p-4">Status</th>
 
             </tr>
 
@@ -1178,8 +801,7 @@ const applyRangeEMI = () => {
                 const actualIndex =
                   schedule.findIndex(
                     (item) =>
-                      item.id ===
-                      row.id
+                      item.id === row.id
                   );
 
                 return (
@@ -1198,9 +820,7 @@ const applyRangeEMI = () => {
                     </td>
 
                     <td className="p-4">
-                      ₹{
-                        row.openingBalance
-                      }
+                      ₹{row.openingBalance}
                     </td>
 
                     <td className="p-4">
@@ -1228,9 +848,7 @@ const applyRangeEMI = () => {
                     </td>
 
                     <td className="p-4 text-red-600 font-bold">
-                      ₹{
-                        row.interestDue
-                      }
+                      ₹{row.interestDue}
                     </td>
 
                     <td className="p-4">
@@ -1244,9 +862,7 @@ const applyRangeEMI = () => {
                     <td className="p-4">
 
                       <select
-                        value={
-                          row.status
-                        }
+                        value={row.status}
                         onChange={(e) =>
                           handleStatusChange(
                             actualIndex,
@@ -1282,7 +898,6 @@ const applyRangeEMI = () => {
 
         </table>
 
-        {/* TOTAL OUTSTANDING */}
         <div className="flex justify-end mt-10">
 
           <div className="text-right">
@@ -1305,7 +920,9 @@ const applyRangeEMI = () => {
       </div>
 
     </div>
+
   );
 }
 
 export default App;
+```
