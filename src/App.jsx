@@ -38,7 +38,14 @@ function App() {
   const [originalEMI, setOriginalEMI] =
     useState(0);
 
-  // MULTI MONTH FILTER
+  // RANGE FILTER
+  const [fromMonth, setFromMonth] =
+    useState("");
+
+  const [toMonth, setToMonth] =
+    useState("");
+
+  // RANDOM FILTER
   const [selectedMonths, setSelectedMonths] =
     useState([""]);
 
@@ -358,7 +365,7 @@ function App() {
     ]);
   };
 
-  // UPDATE MONTH VALUE
+  // UPDATE MONTH
   const updateSelectedMonth = (
     index,
     value
@@ -373,7 +380,7 @@ function App() {
     setSelectedMonths(updated);
   };
 
-  // REMOVE MONTH BOX
+  // REMOVE MONTH
   const removeMonthBox = (
     index
   ) => {
@@ -389,18 +396,62 @@ function App() {
 
   // FILTER LOGIC
   const filteredSchedule =
-    selectedMonths.some(
-      (month) =>
-        month.trim() !== ""
-    )
+    schedule.filter((row) => {
 
-      ? schedule.filter((row) =>
+      // RANGE FILTER
+      let rangeMatch = true;
+
+      if (
+        fromMonth &&
+        toMonth
+      ) {
+
+        const currentIndex =
+          schedule.indexOf(row);
+
+        const fromIndex =
+          schedule.findIndex(
+            (r) =>
+              r.month ===
+              fromMonth
+          );
+
+        const toIndex =
+          schedule.findIndex(
+            (r) =>
+              r.month ===
+              toMonth
+          );
+
+        rangeMatch =
+          currentIndex >=
+            fromIndex &&
+          currentIndex <=
+            toIndex;
+      }
+
+      // RANDOM FILTER
+      let customMatch = true;
+
+      if (
+        selectedMonths.some(
+          (month) =>
+            month.trim() !==
+            ""
+        )
+      ) {
+
+        customMatch =
           selectedMonths.includes(
             row.month
-          )
-        )
+          );
+      }
 
-      : schedule;
+      return (
+        rangeMatch &&
+        customMatch
+      );
+    });
 
   // TOTALS
   const totalInterest =
@@ -586,8 +637,7 @@ function App() {
           }
           className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl"
         >
-          Generate EMI
-          Schedule
+          Generate EMI Schedule
         </button>
 
       </div>
@@ -665,82 +715,163 @@ function App() {
 
       </div>
 
-      {/* MULTI MONTH FILTER */}
+      {/* FILTER SECTION */}
       <div className="bg-white rounded-2xl shadow p-6 mb-8">
 
         <h2 className="text-2xl font-bold mb-4">
-          Custom Month Filter
+          Loan Filters
         </h2>
 
-        <div className="grid md:grid-cols-5 gap-4">
+        {/* RANGE FILTER */}
+        <div className="mb-8">
 
-          {selectedMonths.map(
-            (
-              month,
-              index
-            ) => (
+          <h3 className="text-xl font-semibold mb-4 text-blue-700">
+            Start To End Filter
+          </h3>
 
-              <div
-                key={index}
-                className="flex gap-2"
-              >
+          <div className="grid md:grid-cols-2 gap-4">
 
-                <input
-                  type="text"
-                  placeholder="Eg: Jan 25"
-                  value={month}
-                  onChange={(e) =>
-                    updateSelectedMonth(
-                      index,
-                      e.target.value
-                    )
-                  }
-                  className="border p-3 rounded-xl w-full"
-                />
+            <select
+              value={fromMonth}
+              onChange={(e) =>
+                setFromMonth(
+                  e.target.value
+                )
+              }
+              className="border p-3 rounded-xl"
+            >
 
-                {selectedMonths.length >
-                  1 && (
+              <option value="">
+                Select Start Month
+              </option>
 
-                  <button
-                    onClick={() =>
-                      removeMonthBox(
-                        index
-                      )
-                    }
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 rounded-xl"
-                  >
-                    X
-                  </button>
+              {schedule.map((row) => (
 
-                )}
+                <option
+                  key={row.id}
+                  value={row.month}
+                >
+                  {row.month}
+                </option>
 
-              </div>
+              ))}
 
-            )
-          )}
+            </select>
+
+            <select
+              value={toMonth}
+              onChange={(e) =>
+                setToMonth(
+                  e.target.value
+                )
+              }
+              className="border p-3 rounded-xl"
+            >
+
+              <option value="">
+                Select End Month
+              </option>
+
+              {schedule.map((row) => (
+
+                <option
+                  key={row.id}
+                  value={row.month}
+                >
+                  {row.month}
+                </option>
+
+              ))}
+
+            </select>
+
+          </div>
 
         </div>
 
-        {/* BUTTONS */}
-        <div className="flex gap-4 mt-4">
+        {/* RANDOM FILTER */}
+        <div>
 
-          <button
-            onClick={addMonthBox}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl"
-          >
-            + Add Month
-          </button>
+          <h3 className="text-xl font-semibold mb-4 text-blue-700">
+            Custom Random Month Filter
+          </h3>
 
-          <button
-            onClick={() =>
-              setSelectedMonths([
-                "",
-              ])
-            }
-            className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-xl"
-          >
-            Reset Filter
-          </button>
+          <div className="grid md:grid-cols-5 gap-4">
+
+            {selectedMonths.map(
+              (
+                month,
+                index
+              ) => (
+
+                <div
+                  key={index}
+                  className="flex gap-2"
+                >
+
+                  <input
+                    type="text"
+                    placeholder="Eg: Jan 25"
+                    value={month}
+                    onChange={(e) =>
+                      updateSelectedMonth(
+                        index,
+                        e.target.value
+                      )
+                    }
+                    className="border p-3 rounded-xl w-full"
+                  />
+
+                  {selectedMonths.length >
+                    1 && (
+
+                    <button
+                      onClick={() =>
+                        removeMonthBox(
+                          index
+                        )
+                      }
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 rounded-xl"
+                    >
+                      X
+                    </button>
+
+                  )}
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+          {/* FILTER BUTTONS */}
+          <div className="flex gap-4 mt-4">
+
+            <button
+              onClick={addMonthBox}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl"
+            >
+              + Add Month
+            </button>
+
+            <button
+              onClick={() => {
+
+                setSelectedMonths([
+                  "",
+                ]);
+
+                setFromMonth("");
+                setToMonth("");
+
+              }}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-xl"
+            >
+              Reset Filter
+            </button>
+
+          </div>
 
         </div>
 
