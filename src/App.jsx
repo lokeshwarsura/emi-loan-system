@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function App() {
 
@@ -31,7 +33,7 @@ function App() {
   const [unit, setUnit] =
     useState("");
 
-  // SCHEDULE
+  // EMI SCHEDULE
   const [schedule, setSchedule] =
     useState([]);
 
@@ -75,7 +77,7 @@ function App() {
     return Math.round(emi);
   };
 
-  // GENERATE SCHEDULE
+  // GENERATE EMI SCHEDULE
   const generateSchedule = () => {
 
     let balance =
@@ -192,7 +194,6 @@ function App() {
     updated[index].emi =
       emiValue;
 
-    // AUTO STATUS
     if (emiValue === 0) {
 
       updated[index].status =
@@ -235,7 +236,7 @@ function App() {
     );
   };
 
-  // RECALCULATE
+  // RECALCULATE SCHEDULE
   const recalculateSchedule = (
     updated
   ) => {
@@ -301,33 +302,8 @@ function App() {
         previousDue = 0;
       }
 
-      // PENDING
-      else if (
-        row.status ===
-        "Pending"
-      ) {
-
-        row.carryForwardDue =
-          previousDue;
-
-        row.interestDue =
-          previousDue +
-          interest;
-
-        row.principal = 0;
-
-        row.balance =
-          previousBalance;
-
-        previousDue =
-          row.interestDue;
-      }
-
-      // OVERDUE
-      else if (
-        row.status ===
-        "Overdue"
-      ) {
+      // PENDING / OVERDUE
+      else {
 
         row.carryForwardDue =
           previousDue;
@@ -394,6 +370,152 @@ function App() {
     setSelectedMonths(updated);
   };
 
+  // RESET FILTERS
+  const resetAllFilters = () => {
+
+    setSelectedMonths([
+      "",
+    ]);
+
+    setFromMonth("");
+
+    setToMonth("");
+  };
+
+  // PRINT
+  const handlePrint = () => {
+
+    window.print();
+  };
+
+  // EXPORT CSV
+  const exportCSV = () => {
+
+    const headers = [
+      "Month",
+      "Opening Balance",
+      "EMI",
+      "Principal",
+      "Interest",
+      "Interest Due",
+      "Balance",
+      "Total OS",
+      "Status",
+    ];
+
+    const rows =
+      filteredSchedule.map(
+        (row) => [
+          row.month,
+          row.openingBalance,
+          row.emi,
+          row.principal,
+          row.interest,
+          row.interestDue,
+          row.balance,
+          row.totalOS,
+          row.status,
+        ]
+      );
+
+    let csvContent =
+      headers.join(",") +
+      "\n";
+
+    rows.forEach((row) => {
+
+      csvContent +=
+        row.join(",") +
+        "\n";
+    });
+
+    const blob =
+      new Blob(
+        [csvContent],
+        {
+          type:
+            "text/csv;charset=utf-8;",
+        }
+      );
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+    const link =
+      document.createElement(
+        "a"
+      );
+
+    link.href = url;
+
+    link.setAttribute(
+      "download",
+      "loan_schedule.csv"
+    );
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+
+    document.body.removeChild(
+      link
+    );
+  };
+
+  // EXPORT PDF
+  const exportPDF = () => {
+
+    const doc =
+      new jsPDF();
+
+    doc.setFontSize(18);
+
+    doc.text(
+      "Loan Account Statement",
+      14,
+      20
+    );
+
+    autoTable(doc, {
+      startY: 30,
+
+      head: [[
+        "Month",
+        "Opening",
+        "EMI",
+        "Principal",
+        "Interest",
+        "Due",
+        "Balance",
+        "Total OS",
+        "Status",
+      ]],
+
+      body:
+        filteredSchedule.map(
+          (row) => [
+            row.month,
+            row.openingBalance,
+            row.emi,
+            row.principal,
+            row.interest,
+            row.interestDue,
+            row.balance,
+            row.totalOS,
+            row.status,
+          ]
+        ),
+    });
+
+    doc.save(
+      "loan_schedule.pdf"
+    );
+  };
+
   // FILTER LOGIC
   const filteredSchedule =
     schedule.filter((row) => {
@@ -407,7 +529,9 @@ function App() {
       ) {
 
         const currentIndex =
-          schedule.indexOf(row);
+          schedule.indexOf(
+            row
+          );
 
         const fromIndex =
           schedule.findIndex(
@@ -430,7 +554,7 @@ function App() {
             toIndex;
       }
 
-      // RANDOM FILTER
+      // CUSTOM FILTER
       let customMatch = true;
 
       if (
@@ -454,24 +578,6 @@ function App() {
     });
 
   // TOTALS
-  const totalInterest =
-    filteredSchedule.reduce(
-      (sum, row) =>
-        sum +
-        row.interest,
-      0
-    );
-
-  const totalPaid =
-    filteredSchedule.reduce(
-      (sum, row) =>
-        row.status ===
-        "Paid"
-          ? sum + row.emi
-          : sum,
-      0
-    );
-
   const totalOverdue =
     filteredSchedule.reduce(
       (sum, row) =>
@@ -479,13 +585,6 @@ function App() {
         row.interestDue,
       0
     );
-
-  const overdueMonths =
-    filteredSchedule.filter(
-      (row) =>
-        row.status !==
-        "Paid"
-    ).length;
 
   const lastBalance =
     filteredSchedule.length >
@@ -497,6 +596,7 @@ function App() {
       : 0;
 
   return (
+
     <div className="min-h-screen bg-gray-100 p-6">
 
       {/* TITLE */}
@@ -504,7 +604,7 @@ function App() {
         Loan Account Statement
       </h1>
 
-      {/* TOP SUMMARY */}
+      {/* SUMMARY */}
       <div className="bg-white rounded-2xl shadow p-6 mb-8">
 
         <div className="grid md:grid-cols-6 gap-4 text-center">
@@ -642,79 +742,6 @@ function App() {
 
       </div>
 
-      {/* MEMBER DETAILS */}
-      <div className="bg-white rounded-2xl shadow p-6 mb-8">
-
-        <h2 className="text-2xl font-bold mb-4">
-          Member Details
-        </h2>
-
-        <div className="grid md:grid-cols-5 gap-4">
-
-          <input
-            type="text"
-            placeholder="Member Name"
-            value={memberName}
-            onChange={(e) =>
-              setMemberName(
-                e.target.value
-              )
-            }
-            className="border p-3 rounded-xl"
-          />
-
-          <input
-            type="text"
-            placeholder="BAC No"
-            value={bacNo}
-            onChange={(e) =>
-              setBacNo(
-                e.target.value
-              )
-            }
-            className="border p-3 rounded-xl"
-          />
-
-          <input
-            type="text"
-            placeholder="Case No"
-            value={caseNo}
-            onChange={(e) =>
-              setCaseNo(
-                e.target.value
-              )
-            }
-            className="border p-3 rounded-xl"
-          />
-
-          <input
-            type="text"
-            placeholder="Loan Type"
-            value={loanType}
-            onChange={(e) =>
-              setLoanType(
-                e.target.value
-              )
-            }
-            className="border p-3 rounded-xl"
-          />
-
-          <input
-            type="text"
-            placeholder="Unit"
-            value={unit}
-            onChange={(e) =>
-              setUnit(
-                e.target.value
-              )
-            }
-            className="border p-3 rounded-xl"
-          />
-
-        </div>
-
-      </div>
-
       {/* FILTER SECTION */}
       <div className="bg-white rounded-2xl shadow p-6 mb-8">
 
@@ -745,16 +772,18 @@ function App() {
                 Select Start Month
               </option>
 
-              {schedule.map((row) => (
+              {schedule.map(
+                (row) => (
 
-                <option
-                  key={row.id}
-                  value={row.month}
-                >
-                  {row.month}
-                </option>
+                  <option
+                    key={row.id}
+                    value={row.month}
+                  >
+                    {row.month}
+                  </option>
 
-              ))}
+                )
+              )}
 
             </select>
 
@@ -772,16 +801,18 @@ function App() {
                 Select End Month
               </option>
 
-              {schedule.map((row) => (
+              {schedule.map(
+                (row) => (
 
-                <option
-                  key={row.id}
-                  value={row.month}
-                >
-                  {row.month}
-                </option>
+                  <option
+                    key={row.id}
+                    value={row.month}
+                  >
+                    {row.month}
+                  </option>
 
-              ))}
+                )
+              )}
 
             </select>
 
@@ -845,30 +876,61 @@ function App() {
 
           </div>
 
-          {/* FILTER BUTTONS */}
-          <div className="flex gap-4 mt-4">
+          {/* BUTTONS */}
+          <div className="flex gap-4 mt-4 flex-wrap">
 
             <button
-              onClick={addMonthBox}
+              onClick={
+                addMonthBox
+              }
               className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl"
             >
               + Add Month
             </button>
 
             <button
-              onClick={() => {
-
-                setSelectedMonths([
-                  "",
-                ]);
-
-                setFromMonth("");
-                setToMonth("");
-
-              }}
+              onClick={
+                resetAllFilters
+              }
               className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-xl"
             >
               Reset Filter
+            </button>
+
+            <button
+              onClick={
+                resetAllFilters
+              }
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl"
+            >
+              Back To Full Schedule
+            </button>
+
+            <button
+              onClick={
+                handlePrint
+              }
+              className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl"
+            >
+              Print
+            </button>
+
+            <button
+              onClick={
+                exportCSV
+              }
+              className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-xl"
+            >
+              Export CSV
+            </button>
+
+            <button
+              onClick={
+                exportPDF
+              }
+              className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl"
+            >
+              Export PDF
             </button>
 
           </div>
@@ -877,52 +939,52 @@ function App() {
 
       </div>
 
-      {/* TABLE */}
-      <div className="overflow-x-auto bg-white rounded-2xl shadow">
+      {/* EMI TABLE */}
+      <div className="bg-white rounded-2xl shadow p-6 overflow-auto">
 
-        <table className="w-full text-center">
+        <h2 className="text-2xl font-bold mb-4">
+          EMI Schedule
+        </h2>
+
+        <table className="min-w-full border">
 
           <thead className="bg-blue-600 text-white">
 
             <tr>
 
-              <th className="p-4">
-                Sl. No
-              </th>
-
-              <th className="p-4">
+              <th className="p-3 border">
                 Month
               </th>
 
-              <th className="p-4">
-                Opening Balance
+              <th className="p-3 border">
+                Opening
               </th>
 
-              <th className="p-4">
+              <th className="p-3 border">
                 EMI
               </th>
 
-              <th className="p-4">
+              <th className="p-3 border">
                 Principal
               </th>
 
-              <th className="p-4">
+              <th className="p-3 border">
                 Interest
               </th>
 
-              <th className="p-4">
+              <th className="p-3 border">
                 Interest Due
               </th>
 
-              <th className="p-4">
+              <th className="p-3 border">
                 Balance
               </th>
 
-              <th className="p-4">
-                Total O/S
+              <th className="p-3 border">
+                Total OS
               </th>
 
-              <th className="p-4">
+              <th className="p-3 border">
                 Status
               </th>
 
@@ -936,144 +998,101 @@ function App() {
               (
                 row,
                 index
-              ) => {
+              ) => (
 
-                const originalIndex =
-                  schedule.findIndex(
-                    (r) =>
-                      r.id ===
-                      row.id
-                  );
+                <tr
+                  key={index}
+                  className="text-center"
+                >
 
-                return (
+                  <td className="border p-2">
+                    {row.month}
+                  </td>
 
-                  <tr
-                    key={row.id}
-                    className="border-b"
-                  >
+                  <td className="border p-2">
+                    ₹{
+                      row.openingBalance
+                    }
+                  </td>
 
-                    <td className="p-4">
-                      {row.id}
-                    </td>
+                  <td className="border p-2">
 
-                    <td className="p-4">
-                      {row.month}
-                    </td>
-
-                    <td className="p-4">
-                      ₹{
-                        row.openingBalance
+                    <input
+                      type="number"
+                      value={row.emi}
+                      onChange={(e) =>
+                        updateEMI(
+                          index,
+                          e.target.value
+                        )
                       }
-                    </td>
+                      className="border p-2 w-24 rounded"
+                    />
 
-                    {/* EMI */}
-                    <td className="p-4">
+                  </td>
 
-                      <input
-                        type="number"
-                        value={row.emi}
-                        onChange={(
-                          e
-                        ) =>
-                          updateEMI(
-                            originalIndex,
-                            e
-                              .target
-                              .value
-                          )
-                        }
-                        className="border p-2 rounded-lg w-24"
-                      />
+                  <td className="border p-2">
+                    ₹{row.principal}
+                  </td>
 
-                    </td>
+                  <td className="border p-2">
+                    ₹{row.interest}
+                  </td>
 
-                    {/* PRINCIPAL */}
-                    <td className="p-4">
-                      ₹{
-                        row.principal
+                  <td className="border p-2 text-red-600 font-bold">
+                    ₹{
+                      row.interestDue
+                    }
+                  </td>
+
+                  <td className="border p-2">
+                    ₹{row.balance}
+                  </td>
+
+                  <td className="border p-2">
+                    ₹{row.totalOS}
+                  </td>
+
+                  <td className="border p-2">
+
+                    <select
+                      value={
+                        row.status
                       }
-                    </td>
-
-                    {/* INTEREST */}
-                    <td className="p-4">
-                      ₹{
-                        row.interest
+                      onChange={(e) =>
+                        handleStatusChange(
+                          index,
+                          e.target.value
+                        )
                       }
-                    </td>
+                      className="border p-2 rounded"
+                    >
 
-                    {/* INTEREST DUE */}
-                    <td className="p-4 text-red-600 font-bold">
-                      ₹{
-                        row.interestDue
-                      }
-                    </td>
+                      <option value="Paid">
+                        Paid
+                      </option>
 
-                    {/* BALANCE */}
-                    <td className="p-4 text-blue-700 font-bold">
-                      ₹{
-                        row.balance
-                      }
-                    </td>
+                      <option value="Pending">
+                        Pending
+                      </option>
 
-                    {/* TOTAL O/S */}
-                    <td className="p-4 text-pink-600 font-bold">
-                      ₹{
-                        row.totalOS
-                      }
-                    </td>
+                      <option value="Overdue">
+                        Overdue
+                      </option>
 
-                    {/* STATUS */}
-                    <td className="p-4">
+                    </select>
 
-                      <select
-                        value={
-                          row.status
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          handleStatusChange(
-                            originalIndex,
-                            e
-                              .target
-                              .value
-                          )
-                        }
-                        className="border p-2 rounded-lg"
-                      >
+                  </td>
 
-                        <option>
-                          Paid
-                        </option>
+                </tr>
 
-                        <option>
-                          Pending
-                        </option>
-
-                        <option>
-                          Overdue
-                        </option>
-
-                      </select>
-
-                    </td>
-
-                  </tr>
-
-                );
-              }
+              )
             )}
 
           </tbody>
 
         </table>
 
-      </div>
-
-      {/* FINAL BALANCE */}
-      <div className="text-right text-3xl font-bold text-blue-700 mt-8">
-        Outstanding Balance :
-        ₹{lastBalance}
       </div>
 
     </div>
