@@ -182,8 +182,32 @@ function App() {
       ...schedule,
     ];
 
-    updated[index].emi =
+    const emiValue =
       Number(value);
+
+    // UPDATE EMI
+    updated[index].emi =
+      emiValue;
+
+    // AUTO STATUS UPDATE
+    if (emiValue === 0) {
+
+      updated[index].status =
+        "Overdue";
+    }
+
+    else {
+
+      if (
+        updated[index]
+          .status ===
+        "Overdue"
+      ) {
+
+        updated[index].status =
+          "Paid";
+      }
+    }
 
     recalculateSchedule(
       updated
@@ -208,7 +232,7 @@ function App() {
     );
   };
 
-  // RECALCULATE FULL SCHEDULE
+  // RECALCULATE
   const recalculateSchedule = (
     updated
   ) => {
@@ -247,13 +271,22 @@ function App() {
         "Paid"
       ) {
 
-        row.carryForwardDue = 0;
+        row.carryForwardDue =
+          previousDue;
 
-        row.interestDue = 0;
+        row.interestDue =
+          previousDue;
+
+        const effectiveEMI =
+          row.emi -
+          previousDue;
 
         row.principal =
-          row.emi -
-          interest;
+          effectiveEMI >
+          interest
+            ? effectiveEMI -
+              interest
+            : 0;
 
         row.balance =
           Math.max(
@@ -265,8 +298,33 @@ function App() {
         previousDue = 0;
       }
 
-      // PENDING / OVERDUE
-      else {
+      // PENDING
+      else if (
+        row.status ===
+        "Pending"
+      ) {
+
+        row.carryForwardDue =
+          previousDue;
+
+        row.interestDue =
+          previousDue +
+          interest;
+
+        row.principal = 0;
+
+        row.balance =
+          previousBalance;
+
+        previousDue =
+          row.interestDue;
+      }
+
+      // OVERDUE
+      else if (
+        row.status ===
+        "Overdue"
+      ) {
 
         row.carryForwardDue =
           previousDue;
@@ -295,7 +353,7 @@ function App() {
     setSchedule(updated);
   };
 
-  // FILTER LOGIC
+  // FILTER
   const filteredSchedule =
     schedule.filter((row) => {
 
@@ -763,6 +821,7 @@ function App() {
                       }
                     </td>
 
+                    {/* EMI */}
                     <td className="p-4">
 
                       <input
@@ -783,36 +842,42 @@ function App() {
 
                     </td>
 
+                    {/* PRINCIPAL */}
                     <td className="p-4">
                       ₹{
                         row.principal
                       }
                     </td>
 
+                    {/* INTEREST */}
                     <td className="p-4">
                       ₹{
                         row.interest
                       }
                     </td>
 
+                    {/* INTEREST DUE */}
                     <td className="p-4 text-red-600 font-bold">
                       ₹{
                         row.interestDue
                       }
                     </td>
 
+                    {/* BALANCE */}
                     <td className="p-4 text-blue-700 font-bold">
                       ₹{
                         row.balance
                       }
                     </td>
 
+                    {/* TOTAL O/S */}
                     <td className="p-4 text-pink-600 font-bold">
                       ₹{
                         row.totalOS
                       }
                     </td>
 
+                    {/* STATUS */}
                     <td className="p-4">
 
                       <select
