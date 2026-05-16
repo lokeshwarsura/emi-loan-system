@@ -38,12 +38,9 @@ function App() {
   const [originalEMI, setOriginalEMI] =
     useState(0);
 
-  // FILTERS
-  const [fromMonth, setFromMonth] =
-    useState("");
-
-  const [toMonth, setToMonth] =
-    useState("");
+  // MULTI MONTH FILTER
+  const [selectedMonths, setSelectedMonths] =
+    useState([""]);
 
   // EMI FORMULA
   const calculateEMI = (
@@ -185,11 +182,10 @@ function App() {
     const emiValue =
       Number(value);
 
-    // UPDATE EMI
     updated[index].emi =
       emiValue;
 
-    // AUTO STATUS UPDATE
+    // AUTO STATUS
     if (emiValue === 0) {
 
       updated[index].status =
@@ -353,36 +349,58 @@ function App() {
     setSchedule(updated);
   };
 
-  // FILTER
-  const filteredSchedule =
-    schedule.filter((row) => {
+  // ADD MONTH BOX
+  const addMonthBox = () => {
 
-      if (
-        !fromMonth ||
-        !toMonth
-      )
-        return true;
+    setSelectedMonths([
+      ...selectedMonths,
+      "",
+    ]);
+  };
 
-      const currentIndex =
-        schedule.indexOf(row);
+  // UPDATE MONTH VALUE
+  const updateSelectedMonth = (
+    index,
+    value
+  ) => {
 
-      const fromIndex =
-        schedule.findIndex(
-          (r) =>
-            r.month === fromMonth
-        );
+    const updated = [
+      ...selectedMonths,
+    ];
 
-      const toIndex =
-        schedule.findIndex(
-          (r) =>
-            r.month === toMonth
-        );
+    updated[index] = value;
 
-      return (
-        currentIndex >= fromIndex &&
-        currentIndex <= toIndex
+    setSelectedMonths(updated);
+  };
+
+  // REMOVE MONTH BOX
+  const removeMonthBox = (
+    index
+  ) => {
+
+    const updated =
+      selectedMonths.filter(
+        (_, i) =>
+          i !== index
       );
-    });
+
+    setSelectedMonths(updated);
+  };
+
+  // FILTER LOGIC
+  const filteredSchedule =
+    selectedMonths.some(
+      (month) =>
+        month.trim() !== ""
+    )
+
+      ? schedule.filter((row) =>
+          selectedMonths.includes(
+            row.month
+          )
+        )
+
+      : schedule;
 
   // TOTALS
   const totalInterest =
@@ -647,88 +665,84 @@ function App() {
 
       </div>
 
-      {/* FILTER */}
+      {/* MULTI MONTH FILTER */}
       <div className="bg-white rounded-2xl shadow p-6 mb-8">
 
         <h2 className="text-2xl font-bold mb-4">
-          Filter Time Period
+          Custom Month Filter
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-5 gap-4">
 
-          <select
-            value={fromMonth}
-            onChange={(e) =>
-              setFromMonth(
-                e.target.value
-              )
-            }
-            className="border p-3 rounded-xl"
-          >
+          {selectedMonths.map(
+            (
+              month,
+              index
+            ) => (
 
-            <option value="">
-              Select From Month
-            </option>
-
-            {schedule.map((row) => (
-
-              <option
-                key={row.id}
-                value={row.month}
+              <div
+                key={index}
+                className="flex gap-2"
               >
-                {row.month}
-              </option>
 
-            ))}
+                <input
+                  type="text"
+                  placeholder="Eg: Jan 25"
+                  value={month}
+                  onChange={(e) =>
+                    updateSelectedMonth(
+                      index,
+                      e.target.value
+                    )
+                  }
+                  className="border p-3 rounded-xl w-full"
+                />
 
-          </select>
+                {selectedMonths.length >
+                  1 && (
 
-          <select
-            value={toMonth}
-            onChange={(e) =>
-              setToMonth(
-                e.target.value
-              )
-            }
-            className="border p-3 rounded-xl"
-          >
+                  <button
+                    onClick={() =>
+                      removeMonthBox(
+                        index
+                      )
+                    }
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 rounded-xl"
+                  >
+                    X
+                  </button>
 
-            <option value="">
-              Select To Month
-            </option>
+                )}
 
-            {schedule.map((row) => (
+              </div>
 
-              <option
-                key={row.id}
-                value={row.month}
-              >
-                {row.month}
-              </option>
-
-            ))}
-
-          </select>
+            )
+          )}
 
         </div>
 
-        {fromMonth &&
-          toMonth && (
+        {/* BUTTONS */}
+        <div className="flex gap-4 mt-4">
 
-            <button
-              onClick={() => {
+          <button
+            onClick={addMonthBox}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl"
+          >
+            + Add Month
+          </button>
 
-                setFromMonth("");
-                setToMonth("");
+          <button
+            onClick={() =>
+              setSelectedMonths([
+                "",
+              ])
+            }
+            className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-xl"
+          >
+            Reset Filter
+          </button>
 
-              }}
-              className="mt-4 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl"
-            >
-              Back To Full
-              Schedule
-            </button>
-
-          )}
+        </div>
 
       </div>
 
