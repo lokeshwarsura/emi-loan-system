@@ -20,6 +20,9 @@ function App() {
   // EMI SCHEDULE
   const [schedule, setSchedule] =
     useState([]);
+    
+  const [rangeEMI, setRangeEMI] =
+  useState("");
 
   const [originalEMI, setOriginalEMI] =
     useState(0);
@@ -162,62 +165,192 @@ function App() {
   };
 
   // UPDATE EMI
-  const updateEMI = (
-    index,
-    value
-  ) => {
+ // UPDATE EMI
+const updateEMI = (
+  index,
+  value
+) => {
 
-    const updated = [
-      ...schedule,
-    ];
+  const updated = [
+    ...schedule,
+  ];
 
-    const emiValue =
-      Number(value);
+  const emiValue =
+    Number(value);
 
-    updated[index].emi =
-      emiValue;
+  updated[index].emi =
+    emiValue;
 
-    if (emiValue === 0) {
-
-      updated[index].status =
-        "Overdue";
-    }
-
-    else {
-
-      if (
-        updated[index]
-          .status ===
-        "Overdue"
-      ) {
-
-        updated[index].status =
-          "Paid";
-      }
-    }
-
-    recalculateSchedule(
-      updated
-    );
-  };
-
-  // STATUS CHANGE
-  const handleStatusChange = (
-    index,
-    value
-  ) => {
-
-    const updated = [
-      ...schedule,
-    ];
+  // AUTO STATUS CHANGE
+  if (emiValue === 0) {
 
     updated[index].status =
-      value;
+      "Overdue";
+  }
 
-    recalculateSchedule(
-      updated
+  else {
+
+    if (
+      updated[index]
+        .status ===
+      "Overdue"
+    ) {
+
+      updated[index].status =
+        "Paid";
+    }
+  }
+
+  // RECALCULATE
+  recalculateSchedule(
+    updated
+  );
+};
+
+
+// APPLY EMI TO SELECTED RANGE
+const applyRangeEMI = () => {
+
+  // VALIDATION
+  if (
+    !fromMonth ||
+    !toMonth ||
+    !rangeEMI
+  ) {
+
+    alert(
+      "Select start month, end month and EMI"
     );
-  };
+
+    return;
+  }
+
+  const updated = [
+    ...schedule,
+  ];
+
+  // FIND RANGE
+  const fromIndex =
+    updated.findIndex(
+      (r) =>
+        r.month ===
+        fromMonth
+    );
+
+  const toIndex =
+    updated.findIndex(
+      (r) =>
+        r.month ===
+        toMonth
+    );
+
+  // INVALID RANGE
+  if (
+    fromIndex === -1 ||
+    toIndex === -1
+  ) {
+
+    alert(
+      "Invalid range selected"
+    );
+
+    return;
+  }
+
+  // START > END
+  if (
+    fromIndex > toIndex
+  ) {
+
+    alert(
+      "Start month cannot be after end month"
+    );
+
+    return;
+  }
+
+  // APPLY EMI
+  for (
+    let i = fromIndex;
+    i <= toIndex;
+    i++
+  ) {
+
+    updated[i].emi =
+      Number(rangeEMI);
+  }
+
+  // RECALCULATE
+  recalculateSchedule(
+    updated
+  );
+
+  alert(
+    "Revised EMI applied successfully"
+  );
+};
+
+
+// APPLY EMI TO RANGE
+const applyRangeEMI = () => {
+
+  if (
+    !fromMonth ||
+    !toMonth ||
+    !rangeEMI
+  ) {
+
+    alert(
+      "Select range and EMI"
+    );
+
+    return;
+  }
+
+  const updated = [
+    ...schedule,
+  ];
+
+  const fromIndex =
+    updated.findIndex(
+      (r) =>
+        r.month ===
+        fromMonth
+    );
+
+  const toIndex =
+    updated.findIndex(
+      (r) =>
+        r.month ===
+        toMonth
+    );
+
+  if (
+    fromIndex === -1 ||
+    toIndex === -1
+  ) {
+
+    alert(
+      "Invalid range selected"
+    );
+
+    return;
+  }
+
+  for (
+    let i = fromIndex;
+    i <= toIndex;
+    i++
+  ) {
+
+    updated[i].emi =
+      Number(rangeEMI);
+  }
+
+  recalculateSchedule(
+    updated
+  );
+};
 
   // RECALCULATE
   const recalculateSchedule = (
@@ -731,75 +864,132 @@ function App() {
         </h2>
 
         {/* RANGE FILTER */}
-        <div className="mb-8">
+     {/* RANGE FILTER */}
+<div className="mb-8">
 
-          <h3 className="text-xl font-semibold mb-4 text-blue-700">
-            Start To End Filter
-          </h3>
+  <h3 className="text-xl font-semibold mb-4 text-blue-700">
+    Start To End Filter
+  </h3>
 
-          <div className="grid md:grid-cols-2 gap-4">
+  <div className="grid md:grid-cols-2 gap-4">
 
-            <select
-              value={fromMonth}
-              onChange={(e) =>
-                setFromMonth(
-                  e.target.value
-                )
-              }
-              className="border p-3 rounded-xl"
-            >
+    {/* START MONTH */}
+    <select
+      value={fromMonth}
+      onChange={(e) =>
+        setFromMonth(
+          e.target.value
+        )
+      }
+      className="border p-3 rounded-xl"
+    >
 
-              <option value="">
-                Select Start Month
-              </option>
+      <option value="">
+        Select Start Month
+      </option>
 
-              {schedule.map(
-                (row) => (
+      {schedule.map(
+        (row) => (
 
-                  <option
-                    key={row.id}
-                    value={row.month}
-                  >
-                    {row.month}
-                  </option>
+          <option
+            key={row.id}
+            value={row.month}
+          >
+            {row.month}
+          </option>
 
-                )
-              )}
+        )
+      )}
 
-            </select>
+    </select>
 
-            <select
-              value={toMonth}
-              onChange={(e) =>
-                setToMonth(
-                  e.target.value
-                )
-              }
-              className="border p-3 rounded-xl"
-            >
+    {/* END MONTH */}
+    <select
+      value={toMonth}
+      onChange={(e) =>
+        setToMonth(
+          e.target.value
+        )
+      }
+      className="border p-3 rounded-xl"
+    >
 
-              <option value="">
-                Select End Month
-              </option>
+      <option value="">
+        Select End Month
+      </option>
 
-              {schedule.map(
-                (row) => (
+      {schedule.map(
+        (row) => (
 
-                  <option
-                    key={row.id}
-                    value={row.month}
-                  >
-                    {row.month}
-                  </option>
+          <option
+            key={row.id}
+            value={row.month}
+          >
+            {row.month}
+          </option>
 
-                )
-              )}
+        )
+      )}
 
-            </select>
+    </select>
 
-          </div>
+  </div>
 
-        </div>
+  {/* REVISED EMI SECTION */}
+  <div className="mt-6 flex gap-4 flex-wrap">
+
+    <input
+      type="number"
+      placeholder="Enter Revised EMI"
+      value={rangeEMI}
+      onChange={(e) =>
+        setRangeEMI(
+          e.target.value
+        )
+      }
+      className="border p-3 rounded-xl w-64"
+    />
+
+    <button
+      onClick={
+        applyRangeEMI
+      }
+      className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold"
+    >
+      Apply EMI To Selected Range
+    </button>
+
+  </div>
+
+</div>
+
+  {/* REVISED EMI */}
+  <div className="mt-6 flex gap-4 flex-wrap">
+
+    <input
+      type="number"
+      placeholder="Enter Revised EMI"
+      value={rangeEMI}
+      onChange={(e) =>
+        setRangeEMI(
+          e.target.value
+        )
+      }
+      className="border p-3 rounded-xl w-64"
+    />
+
+    <button
+      onClick={
+        applyRangeEMI
+      }
+      className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold"
+    >
+      Apply EMI To Selected Range
+    </button>
+
+  </div>
+
+</div>
 
         {/* RANDOM FILTER */}
         <div>
