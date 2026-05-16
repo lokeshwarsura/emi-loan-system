@@ -62,7 +62,7 @@ function App() {
           year: "2-digit",
         }),
 
-        openingBalance: balance,
+        openingBalance: Math.round(balance),
 
         emi,
 
@@ -122,7 +122,7 @@ function App() {
     setSchedule(updated);
   };
 
-  // Filter Schedule
+  // Filter
   const filteredSchedule = schedule.filter(
     (row) => {
       if (!fromMonth || !toMonth) return true;
@@ -147,11 +147,14 @@ function App() {
 
   // Totals
   const totalOutstanding =
-    filteredSchedule.length > 0
-      ? filteredSchedule[
-          filteredSchedule.length - 1
-        ].balance
-      : 0;
+    filteredSchedule.reduce(
+      (sum, row) =>
+        sum +
+        (row.status === "Overdue"
+          ? row.emi
+          : row.balance),
+      0
+    );
 
   const totalInterest =
     filteredSchedule.reduce(
@@ -163,7 +166,10 @@ function App() {
   const totalPaid =
     filteredSchedule.reduce(
       (sum, row) =>
-        sum + Number(row.emi),
+        sum +
+        (row.status === "Paid"
+          ? Number(row.emi)
+          : 0),
       0
     );
 
@@ -193,7 +199,6 @@ function App() {
 
             <input
               type="number"
-              placeholder="Loan Amount"
               className="p-3 border rounded-xl w-full"
               value={loanAmount}
               onChange={(e) =>
@@ -210,7 +215,6 @@ function App() {
 
             <input
               type="number"
-              placeholder="Interest Rate"
               className="p-3 border rounded-xl w-full"
               value={interestRate}
               onChange={(e) =>
@@ -229,7 +233,6 @@ function App() {
 
             <input
               type="number"
-              placeholder="Tenure"
               className="p-3 border rounded-xl w-full"
               value={tenure}
               onChange={(e) =>
@@ -464,7 +467,14 @@ function App() {
                         </td>
 
                         <td className="p-3 font-bold text-blue-600">
-                          ₹{row.balance}
+
+                          ₹
+                          {row.status ===
+                          "Overdue"
+                            ? row.balance +
+                              row.emi
+                            : row.balance}
+
                         </td>
 
                         <td className="p-3">
@@ -473,6 +483,7 @@ function App() {
                             className="border p-2 rounded-lg"
                             value={row.status}
                             onChange={(e) => {
+
                               const updated = [
                                 ...schedule,
                               ];
