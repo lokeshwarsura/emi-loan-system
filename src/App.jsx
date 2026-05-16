@@ -313,7 +313,7 @@ function App() {
     setSchedule(updated);
   };
 
-  // ADD MONTH BOX
+  // ADD MONTH
   const addMonthBox = () => {
 
     setSelectedMonths([
@@ -465,12 +465,13 @@ function App() {
       startY: 30,
 
       head: [[
+        "Sl No",
         "Month",
         "Opening",
         "EMI",
         "Principal",
         "Interest",
-        "Due",
+        "Interest Due",
         "Balance",
         "Total OS",
         "Status",
@@ -478,7 +479,11 @@ function App() {
 
       body:
         filteredSchedule.map(
-          (row) => [
+          (
+            row,
+            index
+          ) => [
+            index + 1,
             row.month,
             row.openingBalance,
             row.emi,
@@ -725,7 +730,7 @@ function App() {
           Loan Filters
         </h2>
 
-        {/* RANGE */}
+        {/* RANGE FILTER */}
         <div className="mb-8">
 
           <h3 className="text-xl font-semibold mb-4 text-blue-700">
@@ -796,7 +801,7 @@ function App() {
 
         </div>
 
-        {/* CUSTOM FILTER */}
+        {/* RANDOM FILTER */}
         <div>
 
           <h3 className="text-xl font-semibold mb-4 text-blue-700">
@@ -915,52 +920,56 @@ function App() {
 
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white rounded-2xl shadow p-6 overflow-auto">
+      {/* EMI TABLE */}
+      <div className="bg-white rounded-3xl shadow p-6 overflow-auto">
 
-        <h2 className="text-2xl font-bold mb-4">
+        <h2 className="text-3xl font-bold text-blue-700 mb-6">
           EMI Schedule
         </h2>
 
-        <table className="min-w-full border">
+        <table className="min-w-full overflow-hidden rounded-3xl">
 
           <thead className="bg-blue-600 text-white">
 
             <tr>
 
-              <th className="p-3 border">
+              <th className="p-4">
+                Sl. No
+              </th>
+
+              <th className="p-4">
                 Month
               </th>
 
-              <th className="p-3 border">
-                Opening
+              <th className="p-4">
+                Opening Balance
               </th>
 
-              <th className="p-3 border">
+              <th className="p-4">
                 EMI
               </th>
 
-              <th className="p-3 border">
+              <th className="p-4">
                 Principal
               </th>
 
-              <th className="p-3 border">
+              <th className="p-4">
                 Interest
               </th>
 
-              <th className="p-3 border">
+              <th className="p-4">
                 Interest Due
               </th>
 
-              <th className="p-3 border">
+              <th className="p-4">
                 Balance
               </th>
 
-              <th className="p-3 border">
-                Total OS
+              <th className="p-4">
+                Total O/S
               </th>
 
-              <th className="p-3 border">
+              <th className="p-4">
                 Status
               </th>
 
@@ -971,7 +980,10 @@ function App() {
           <tbody>
 
             {filteredSchedule.map(
-              (row) => {
+              (
+                row,
+                displayIndex
+              ) => {
 
                 const actualIndex =
                   schedule.findIndex(
@@ -984,20 +996,24 @@ function App() {
 
                   <tr
                     key={row.id}
-                    className="text-center"
+                    className="text-center border-b hover:bg-gray-50"
                   >
 
-                    <td className="border p-2">
+                    <td className="p-4 font-semibold">
+                      {displayIndex + 1}
+                    </td>
+
+                    <td className="p-4 font-medium">
                       {row.month}
                     </td>
 
-                    <td className="border p-2">
+                    <td className="p-4">
                       ₹{
                         row.openingBalance
                       }
                     </td>
 
-                    <td className="border p-2">
+                    <td className="p-4">
 
                       <input
                         type="number"
@@ -1008,34 +1024,34 @@ function App() {
                             e.target.value
                           )
                         }
-                        className="border p-2 w-24 rounded"
+                        className="border border-gray-300 p-2 rounded-lg w-28 text-center"
                       />
 
                     </td>
 
-                    <td className="border p-2">
+                    <td className="p-4">
                       ₹{row.principal}
                     </td>
 
-                    <td className="border p-2">
+                    <td className="p-4">
                       ₹{row.interest}
                     </td>
 
-                    <td className="border p-2 text-red-600 font-bold">
+                    <td className="p-4 text-red-600 font-bold">
                       ₹{
                         row.interestDue
                       }
                     </td>
 
-                    <td className="border p-2">
+                    <td className="p-4">
                       ₹{row.balance}
                     </td>
 
-                    <td className="border p-2">
+                    <td className="p-4 font-semibold text-purple-700">
                       ₹{row.totalOS}
                     </td>
 
-                    <td className="border p-2">
+                    <td className="p-4">
 
                       <select
                         value={
@@ -1047,7 +1063,7 @@ function App() {
                             e.target.value
                           )
                         }
-                        className="border p-2 rounded"
+                        className="border border-gray-300 p-2 rounded-lg"
                       >
 
                         <option value="Paid">
@@ -1075,6 +1091,26 @@ function App() {
           </tbody>
 
         </table>
+
+        {/* TOTAL OUTSTANDING */}
+        <div className="flex justify-end mt-10">
+
+          <div className="text-right">
+
+            <h2 className="text-5xl font-bold text-blue-700">
+
+              Outstanding Balance :
+              <span className="text-purple-700">
+
+                ₹{lastBalance}
+
+              </span>
+
+            </h2>
+
+          </div>
+
+        </div>
 
       </div>
 
