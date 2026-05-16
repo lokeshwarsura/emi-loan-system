@@ -1,75 +1,108 @@
 import React, { useState } from "react";
 
 function App() {
-  const [loanAmount, setLoanAmount] = useState(100000);
-  const [interestRate, setInterestRate] = useState(11);
-  const [tenure, setTenure] = useState(12);
+
+  const [loanAmount, setLoanAmount] =
+    useState(100000);
+
+  const [interestRate, setInterestRate] =
+    useState(11);
+
+  const [tenure, setTenure] =
+    useState(12);
 
   const [startMonth, setStartMonth] =
-    useState("2025-01-01");
+    useState("2024-02-01");
 
-  const [schedule, setSchedule] = useState([]);
-
-  const [fromMonth, setFromMonth] = useState("");
-  const [toMonth, setToMonth] = useState("");
+  const [schedule, setSchedule] =
+    useState([]);
 
   const [originalEMI, setOriginalEMI] =
     useState(0);
 
-  // EMI Formula
-  const calculateEMI = (P, annualRate, N) => {
-    const R = annualRate / 12 / 100;
+  // FILTER STATES
+  const [fromMonth, setFromMonth] =
+    useState("");
+
+  const [toMonth, setToMonth] =
+    useState("");
+
+  // EMI FORMULA
+  const calculateEMI = (
+    P,
+    annualRate,
+    N
+  ) => {
+
+    const R =
+      annualRate / 12 / 100;
 
     const emi =
-      (P * R * Math.pow(1 + R, N)) /
-      (Math.pow(1 + R, N) - 1);
+      (P *
+        R *
+        Math.pow(
+          1 + R,
+          N
+        )) /
+      (Math.pow(
+        1 + R,
+        N
+      ) -
+        1);
 
     return Math.round(emi);
   };
 
-  // Generate EMI Schedule
+  // GENERATE EMI SCHEDULE
   const generateSchedule = () => {
-    let balance = Number(loanAmount);
 
-    const emi = calculateEMI(
-      balance,
-      interestRate,
-      tenure
-    );
+    let balance =
+      Number(loanAmount);
+
+    const emi =
+      calculateEMI(
+        balance,
+        interestRate,
+        tenure
+      );
 
     setOriginalEMI(emi);
 
     let data = [];
 
-    const start = new Date(startMonth);
+    const start =
+      new Date(startMonth);
 
-    let carryForwardDue = 0;
+    for (
+      let i = 0;
+      i < tenure;
+      i++
+    ) {
 
-    for (let i = 0; i < tenure; i++) {
-
-      const interest = Math.round(
-        (balance * interestRate) /
-          12 /
-          100
-      );
+      const interest =
+        Math.round(
+          (balance *
+            interestRate) /
+            12 /
+            100
+        );
 
       const principal =
-        emi > interest
-          ? emi - interest
-          : 0;
+        emi - interest;
 
       const newBalance =
-        emi > interest
-          ? Math.max(
-              0,
-              balance - principal
-            )
-          : balance;
+        Math.max(
+          0,
+          balance -
+            principal
+        );
 
-      const monthDate = new Date(start);
+      const monthDate =
+        new Date(start);
 
       monthDate.setMonth(
-        start.getMonth() + i
+        start.getMonth() +
+          i
       );
 
       data.push({
@@ -79,13 +112,17 @@ function App() {
           monthDate.toLocaleString(
             "default",
             {
-              month: "short",
-              year: "2-digit",
+              month:
+                "short",
+              year:
+                "2-digit",
             }
           ),
 
         openingBalance:
-          Math.round(balance),
+          Math.round(
+            balance
+          ),
 
         emi,
 
@@ -93,34 +130,47 @@ function App() {
 
         interest,
 
-        carryForwardDue,
+        carryForwardDue: 0,
 
-        interestDue: carryForwardDue,
+        interestDue: 0,
 
         balance:
-          Math.round(newBalance),
+          Math.round(
+            newBalance
+          ),
 
         status: "Paid",
       });
 
-      balance = newBalance;
+      balance =
+        newBalance;
     }
 
     setSchedule(data);
   };
 
-  // Update EMI
-  const updateEMI = (index, value) => {
+  // UPDATE EMI
+  const updateEMI = (
+    index,
+    value
+  ) => {
 
-    const updated = [...schedule];
+    const updated = [
+      ...schedule,
+    ];
 
-    updated[index].emi = Number(value);
+    updated[index].emi =
+      Number(value);
 
     let balance =
       index === 0
-        ? Number(loanAmount)
+        ? Number(
+            loanAmount
+          )
         : Number(
-            updated[index - 1].balance
+            updated[
+              index - 1
+            ].balance
           );
 
     for (
@@ -129,107 +179,168 @@ function App() {
       i++
     ) {
 
-      const emi = Number(
-        updated[i].emi
-      );
+      const emi =
+        Number(
+          updated[i].emi
+        );
 
-      const interest = Math.round(
-        (balance * interestRate) /
-          12 /
-          100
-      );
+      const interest =
+        Math.round(
+          (balance *
+            interestRate) /
+            12 /
+            100
+        );
 
       const principal =
         emi > interest
-          ? emi - interest
+          ? emi -
+            interest
           : 0;
 
       const newBalance =
         emi > interest
           ? Math.max(
               0,
-              balance - principal
+              balance -
+                principal
             )
           : balance;
 
-      updated[i].openingBalance =
-        Math.round(balance);
+      updated[
+        i
+      ].openingBalance =
+        Math.round(
+          balance
+        );
 
       updated[i].interest =
         interest;
 
-      updated[i].principal =
+      updated[
+        i
+      ].principal =
         principal;
 
       updated[i].balance =
-        Math.round(newBalance);
+        Math.round(
+          newBalance
+        );
 
-      balance = newBalance;
+      balance =
+        newBalance;
     }
 
     setSchedule(updated);
   };
 
-  // Handle Status Change
+  // STATUS LOGIC
   const handleStatusChange = (
     originalIndex,
     value
   ) => {
 
-    const updated = [...schedule];
+    const updated = [
+      ...schedule,
+    ];
 
-    updated[originalIndex].status =
-      value;
+    updated[
+      originalIndex
+    ].status = value;
 
-    // OVERDUE LOGIC
-    if (value === "Overdue") {
+    let previousDue = 0;
 
-      const previousDue =
-        originalIndex > 0
-          ? updated[
-              originalIndex - 1
-            ].interestDue
-          : 0;
+    for (
+      let i = 0;
+      i < updated.length;
+      i++
+    ) {
+
+      const row =
+        updated[i];
+
+      const previousBalance =
+        i === 0
+          ? Number(
+              loanAmount
+            )
+          : updated[
+              i - 1
+            ].balance;
 
       const currentInterest =
-        updated[originalIndex]
-          .interest;
+        row.interest;
 
-      // Add Carry Forward
-      updated[
-        originalIndex
-      ].carryForwardDue =
-        previousDue;
+      // PAID
+      if (
+        row.status ===
+        "Paid"
+      ) {
 
-      // Total Due
-      updated[
-        originalIndex
-      ].interestDue =
-        previousDue +
-        currentInterest;
+        row.carryForwardDue = 0;
 
-      // Principal should not reduce
-      updated[
-        originalIndex
-      ].principal = 0;
-    }
+        row.interestDue = 0;
 
-    // PAID LOGIC
-    else {
+        row.principal =
+          row.emi -
+          currentInterest;
 
-      updated[
-        originalIndex
-      ].interestDue = 0;
+        row.balance =
+          previousBalance -
+          row.principal;
 
-      updated[
-        originalIndex
-      ].carryForwardDue = 0;
+        previousDue = 0;
+      }
+
+      // PENDING
+      else if (
+        row.status ===
+        "Pending"
+      ) {
+
+        row.carryForwardDue =
+          previousDue;
+
+        row.interestDue =
+          previousDue +
+          currentInterest;
+
+        row.principal = 0;
+
+        row.balance =
+          previousBalance;
+
+        previousDue =
+          row.interestDue;
+      }
+
+      // OVERDUE
+      else if (
+        row.status ===
+        "Overdue"
+      ) {
+
+        row.carryForwardDue =
+          previousDue;
+
+        row.interestDue =
+          previousDue +
+          currentInterest;
+
+        row.principal = 0;
+
+        row.balance =
+          previousBalance;
+
+        previousDue =
+          row.interestDue;
+      }
     }
 
     setSchedule(updated);
   };
 
-  // Filter
+  // FILTER LOGIC
   const filteredSchedule =
     schedule.filter((row) => {
 
@@ -260,7 +371,7 @@ function App() {
       );
     });
 
-  // Totals
+  // TOTALS
   const totalOutstanding =
     filteredSchedule.reduce(
       (sum, row) =>
@@ -273,7 +384,8 @@ function App() {
   const totalInterest =
     filteredSchedule.reduce(
       (sum, row) =>
-        sum + Number(row.interest),
+        sum +
+        row.interest,
       0
     );
 
@@ -281,39 +393,38 @@ function App() {
     filteredSchedule.reduce(
       (sum, row) =>
         sum +
-        (row.status === "Paid"
-          ? Number(row.emi)
+        (row.status ===
+        "Paid"
+          ? row.emi
           : 0),
       0
     );
 
-  const totalOverdueAmount =
-    schedule.reduce(
+  const totalOverdue =
+    filteredSchedule.reduce(
       (sum, row) =>
-        row.status ===
-        "Overdue"
-          ? sum +
-            Number(
-              row.interestDue
-            )
-          : sum,
+        sum +
+        row.interestDue,
       0
     );
 
   const overdueMonths =
-    schedule.filter(
+    filteredSchedule.filter(
       (row) =>
         row.status ===
-        "Overdue"
+          "Overdue" ||
+        row.status ===
+          "Pending"
     ).length;
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
 
       {/* TITLE */}
-      <h1 className="text-4xl font-bold text-center mb-8 text-blue-700">
-        EMI & Outstanding Loan
-        Management System
+      <h1 className="text-4xl font-bold text-center text-blue-700 mb-8">
+        EMI & Outstanding
+        Loan Management
+        System
       </h1>
 
       {/* LOAN DETAILS */}
@@ -326,71 +437,85 @@ function App() {
         <div className="grid md:grid-cols-4 gap-4">
 
           <div>
-            <label className="block mb-2 font-semibold">
+
+            <label className="block font-semibold mb-2">
               Loan Amount
             </label>
 
             <input
               type="number"
-              className="p-3 border rounded-xl w-full"
-              value={loanAmount}
+              value={
+                loanAmount
+              }
               onChange={(e) =>
                 setLoanAmount(
                   e.target.value
                 )
               }
+              className="w-full border p-3 rounded-xl"
             />
+
           </div>
 
           <div>
-            <label className="block mb-2 font-semibold">
-              Interest Rate (%)
+
+            <label className="block font-semibold mb-2">
+              Interest Rate
             </label>
 
             <input
               type="number"
-              className="p-3 border rounded-xl w-full"
-              value={interestRate}
+              value={
+                interestRate
+              }
               onChange={(e) =>
                 setInterestRate(
                   e.target.value
                 )
               }
+              className="w-full border p-3 rounded-xl"
             />
+
           </div>
 
           <div>
-            <label className="block mb-2 font-semibold">
-              Tenure (Months)
+
+            <label className="block font-semibold mb-2">
+              Tenure
             </label>
 
             <input
               type="number"
-              className="p-3 border rounded-xl w-full"
               value={tenure}
               onChange={(e) =>
                 setTenure(
                   e.target.value
                 )
               }
+              className="w-full border p-3 rounded-xl"
             />
+
           </div>
 
           <div>
-            <label className="block mb-2 font-semibold">
+
+            <label className="block font-semibold mb-2">
               Start Date
             </label>
 
             <input
               type="date"
-              className="p-3 border rounded-xl w-full"
-              value={startMonth}
+              value={
+                startMonth
+              }
               onChange={(e) =>
                 setStartMonth(
                   e.target.value
                 )
               }
+              className="w-full border p-3 rounded-xl"
             />
+
           </div>
 
         </div>
@@ -401,7 +526,8 @@ function App() {
           }
           className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl"
         >
-          Generate EMI Schedule
+          Generate EMI
+          Schedule
         </button>
 
       </div>
@@ -413,18 +539,24 @@ function App() {
           <div className="grid md:grid-cols-5 gap-4 mb-8">
 
             <div className="bg-white p-5 rounded-2xl shadow">
+
               <h3 className="text-gray-500">
                 Monthly EMI
               </h3>
 
               <p className="text-3xl font-bold text-blue-600">
-                ₹{originalEMI}
+                ₹{
+                  originalEMI
+                }
               </p>
+
             </div>
 
             <div className="bg-white p-5 rounded-2xl shadow">
+
               <h3 className="text-gray-500">
-                Outstanding Balance
+                Outstanding
+                Balance
               </h3>
 
               <p className="text-3xl font-bold text-red-600">
@@ -432,93 +564,204 @@ function App() {
                   totalOutstanding
                 }
               </p>
+
             </div>
 
             <div className="bg-white p-5 rounded-2xl shadow">
+
               <h3 className="text-gray-500">
                 Total Interest
               </h3>
 
               <p className="text-3xl font-bold text-green-600">
-                ₹{totalInterest}
+                ₹{
+                  totalInterest
+                }
               </p>
+
             </div>
 
             <div className="bg-white p-5 rounded-2xl shadow">
+
               <h3 className="text-gray-500">
                 Total Paid
               </h3>
 
               <p className="text-3xl font-bold text-purple-600">
-                ₹{totalPaid}
+                ₹{
+                  totalPaid
+                }
               </p>
+
             </div>
 
             <div className="bg-white p-5 rounded-2xl shadow">
+
               <h3 className="text-gray-500">
-                Overdue Summary
+                Overdue
+                Summary
               </h3>
 
               <p className="text-2xl font-bold text-orange-600">
                 ₹{
-                  totalOverdueAmount
+                  totalOverdue
                 }
               </p>
 
               <p className="text-sm text-gray-500 mt-2">
-                {overdueMonths} Month(s)
-                Overdue
+                {
+                  overdueMonths
+                }{" "}
+                Month(s)
+                Due
               </p>
+
             </div>
+
+          </div>
+
+          {/* FILTER SECTION */}
+          <div className="bg-white p-6 rounded-2xl shadow mb-8">
+
+            <h2 className="text-2xl font-bold mb-4">
+              Filter Time Period
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-4">
+
+              {/* FROM */}
+              <select
+                className="p-3 border rounded-xl"
+                value={fromMonth}
+                onChange={(e) =>
+                  setFromMonth(
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="">
+                  Select From Month
+                </option>
+
+                {schedule.map((row) => (
+
+                  <option
+                    key={row.id}
+                    value={row.month}
+                  >
+                    {row.month}
+                  </option>
+
+                ))}
+
+              </select>
+
+              {/* TO */}
+              <select
+                className="p-3 border rounded-xl"
+                value={toMonth}
+                onChange={(e) =>
+                  setToMonth(
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="">
+                  Select To Month
+                </option>
+
+                {schedule.map((row) => (
+
+                  <option
+                    key={row.id}
+                    value={row.month}
+                  >
+                    {row.month}
+                  </option>
+
+                ))}
+
+              </select>
+
+            </div>
+
+            {/* BACK BUTTON */}
+            {fromMonth &&
+              toMonth && (
+
+                <div className="mt-4">
+
+                  <button
+                    onClick={() => {
+
+                      setFromMonth("");
+                      setToMonth("");
+
+                    }}
+                    className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl"
+                  >
+                    Back To Full
+                    Schedule
+                  </button>
+
+                </div>
+
+              )}
 
           </div>
 
           {/* TABLE */}
           <div className="overflow-x-auto bg-white rounded-2xl shadow">
 
-            <table className="w-full border-collapse">
+            <table className="w-full">
 
               <thead className="bg-blue-600 text-white">
 
                 <tr>
 
-                  <th className="p-3">
+                  <th className="p-4">
                     Sl. No
                   </th>
 
-                  <th className="p-3">
+                  <th className="p-4">
                     Month
                   </th>
 
-                  <th className="p-3">
-                    Opening Balance
+                  <th className="p-4">
+                    Opening
+                    Balance
                   </th>
 
-                  <th className="p-3">
+                  <th className="p-4">
                     EMI
                   </th>
 
-                  <th className="p-3">
+                  <th className="p-4">
                     Principal
                   </th>
 
-                  <th className="p-3">
+                  <th className="p-4">
                     Interest
                   </th>
 
-                  <th className="p-3">
-                    Carry Forward Due
+                  <th className="p-4">
+                    Carry
+                    Forward
+                    Due
                   </th>
 
-                  <th className="p-3">
-                    Interest Due
+                  <th className="p-4">
+                    Interest
+                    Due
                   </th>
 
-                  <th className="p-3">
+                  <th className="p-4">
                     Outstanding
                   </th>
 
-                  <th className="p-3">
+                  <th className="p-4">
                     Status
                   </th>
 
@@ -529,7 +772,10 @@ function App() {
               <tbody>
 
                 {filteredSchedule.map(
-                  (row) => {
+                  (
+                    row,
+                    index
+                  ) => {
 
                     const originalIndex =
                       schedule.findIndex(
@@ -545,30 +791,39 @@ function App() {
                         className="text-center border-b"
                       >
 
-                        <td className="p-3">
+                        <td className="p-4">
                           {row.id}
                         </td>
 
-                        <td className="p-3">
-                          {row.month}
+                        <td className="p-4">
+                          {
+                            row.month
+                          }
                         </td>
 
-                        <td className="p-3">
-                          ₹{
+                        <td className="p-4">
+                          ₹
+                          {
                             row.openingBalance
                           }
                         </td>
 
-                        <td className="p-3">
+                        {/* EMI */}
+                        <td className="p-4">
 
                           <input
                             type="number"
-                            value={row.emi}
+                            value={
+                              row.emi
+                            }
                             className="border p-2 rounded-lg w-24"
-                            onChange={(e) =>
+                            onChange={(
+                              e
+                            ) =>
                               updateEMI(
                                 originalIndex,
-                                e.target
+                                e
+                                  .target
                                   .value
                               )
                             }
@@ -576,46 +831,49 @@ function App() {
 
                         </td>
 
-                        <td className="p-3">
-                          ₹{
+                        {/* PRINCIPAL */}
+                        <td className="p-4">
+                          ₹
+                          {
                             row.principal
                           }
                         </td>
 
-                        <td className="p-3">
-                          ₹{
+                        {/* INTEREST */}
+                        <td className="p-4">
+                          ₹
+                          {
                             row.interest
                           }
                         </td>
 
-                        {/* Carry Forward */}
-                        <td className="p-3 text-orange-600 font-bold">
-                          ₹{
+                        {/* CARRY FORWARD */}
+                        <td className="p-4 text-orange-600 font-bold">
+                          ₹
+                          {
                             row.carryForwardDue
                           }
                         </td>
 
-                        {/* Interest Due */}
-                        <td className="p-3 text-red-600 font-bold">
-                          ₹{
+                        {/* INTEREST DUE */}
+                        <td className="p-4 text-red-600 font-bold">
+                          ₹
+                          {
                             row.interestDue
                           }
                         </td>
 
-                        {/* Outstanding */}
-                        <td className="p-3 font-bold text-blue-600">
-
+                        {/* OUTSTANDING */}
+                        <td className="p-4 font-bold text-blue-600">
                           ₹
                           {row.balance +
                             row.interestDue}
-
                         </td>
 
                         {/* STATUS */}
-                        <td className="p-3">
+                        <td className="p-4">
 
                           <select
-                            className="border p-2 rounded-lg"
                             value={
                               row.status
                             }
@@ -624,10 +882,12 @@ function App() {
                             ) =>
                               handleStatusChange(
                                 originalIndex,
-                                e.target
+                                e
+                                  .target
                                   .value
                               )
                             }
+                            className="border p-2 rounded-lg"
                           >
 
                             <option>
