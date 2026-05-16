@@ -13,7 +13,6 @@ function App() {
   const [fromMonth, setFromMonth] = useState("");
   const [toMonth, setToMonth] = useState("");
 
-  // Original EMI
   const [originalEMI, setOriginalEMI] =
     useState(0);
 
@@ -43,6 +42,8 @@ function App() {
     let data = [];
 
     const start = new Date(startMonth);
+
+    let carryForwardDue = 0;
 
     for (let i = 0; i < tenure; i++) {
 
@@ -92,7 +93,9 @@ function App() {
 
         interest,
 
-        interestDue: 0,
+        carryForwardDue,
+
+        interestDue: carryForwardDue,
 
         balance:
           Math.round(newBalance),
@@ -136,7 +139,6 @@ function App() {
           100
       );
 
-      // FIXED PRINCIPAL
       const principal =
         emi > interest
           ? emi - interest
@@ -163,6 +165,65 @@ function App() {
         Math.round(newBalance);
 
       balance = newBalance;
+    }
+
+    setSchedule(updated);
+  };
+
+  // Handle Status Change
+  const handleStatusChange = (
+    originalIndex,
+    value
+  ) => {
+
+    const updated = [...schedule];
+
+    updated[originalIndex].status =
+      value;
+
+    // OVERDUE LOGIC
+    if (value === "Overdue") {
+
+      const previousDue =
+        originalIndex > 0
+          ? updated[
+              originalIndex - 1
+            ].interestDue
+          : 0;
+
+      const currentInterest =
+        updated[originalIndex]
+          .interest;
+
+      // Add Carry Forward
+      updated[
+        originalIndex
+      ].carryForwardDue =
+        previousDue;
+
+      // Total Due
+      updated[
+        originalIndex
+      ].interestDue =
+        previousDue +
+        currentInterest;
+
+      // Principal should not reduce
+      updated[
+        originalIndex
+      ].principal = 0;
+    }
+
+    // PAID LOGIC
+    else {
+
+      updated[
+        originalIndex
+      ].interestDue = 0;
+
+      updated[
+        originalIndex
+      ].carryForwardDue = 0;
     }
 
     setSchedule(updated);
@@ -204,11 +265,8 @@ function App() {
     filteredSchedule.reduce(
       (sum, row) =>
         sum +
-        (row.status ===
-        "Overdue"
-          ? row.balance +
-            row.interestDue
-          : row.balance),
+        row.balance +
+        row.interestDue,
       0
     );
 
@@ -229,19 +287,19 @@ function App() {
       0
     );
 
-  // Overdue Amount
   const totalOverdueAmount =
     schedule.reduce(
       (sum, row) =>
         row.status ===
         "Overdue"
           ? sum +
-            Number(row.emi)
+            Number(
+              row.interestDue
+            )
           : sum,
       0
     );
 
-  // Overdue Count
   const overdueMonths =
     schedule.filter(
       (row) =>
@@ -252,13 +310,13 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
 
-      {/* Title */}
+      {/* TITLE */}
       <h1 className="text-4xl font-bold text-center mb-8 text-blue-700">
         EMI & Outstanding Loan
         Management System
       </h1>
 
-      {/* Loan Inputs */}
+      {/* LOAN DETAILS */}
       <div className="bg-white p-6 rounded-2xl shadow mb-8">
 
         <h2 className="text-2xl font-bold mb-4">
@@ -267,9 +325,7 @@ function App() {
 
         <div className="grid md:grid-cols-4 gap-4">
 
-          {/* Loan Amount */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Loan Amount
             </label>
@@ -284,12 +340,9 @@ function App() {
                 )
               }
             />
-
           </div>
 
-          {/* Interest */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Interest Rate (%)
             </label>
@@ -304,12 +357,9 @@ function App() {
                 )
               }
             />
-
           </div>
 
-          {/* Tenure */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Tenure (Months)
             </label>
@@ -324,12 +374,9 @@ function App() {
                 )
               }
             />
-
           </div>
 
-          {/* Date */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Start Date
             </label>
@@ -344,7 +391,6 @@ function App() {
                 )
               }
             />
-
           </div>
 
         </div>
@@ -360,15 +406,13 @@ function App() {
 
       </div>
 
-      {/* Dashboard */}
+      {/* DASHBOARD */}
       {schedule.length > 0 && (
         <>
 
           <div className="grid md:grid-cols-5 gap-4 mb-8">
 
-            {/* EMI */}
             <div className="bg-white p-5 rounded-2xl shadow">
-
               <h3 className="text-gray-500">
                 Monthly EMI
               </h3>
@@ -376,12 +420,9 @@ function App() {
               <p className="text-3xl font-bold text-blue-600">
                 ₹{originalEMI}
               </p>
-
             </div>
 
-            {/* Outstanding */}
             <div className="bg-white p-5 rounded-2xl shadow">
-
               <h3 className="text-gray-500">
                 Outstanding Balance
               </h3>
@@ -391,12 +432,9 @@ function App() {
                   totalOutstanding
                 }
               </p>
-
             </div>
 
-            {/* Interest */}
             <div className="bg-white p-5 rounded-2xl shadow">
-
               <h3 className="text-gray-500">
                 Total Interest
               </h3>
@@ -404,12 +442,9 @@ function App() {
               <p className="text-3xl font-bold text-green-600">
                 ₹{totalInterest}
               </p>
-
             </div>
 
-            {/* Paid */}
             <div className="bg-white p-5 rounded-2xl shadow">
-
               <h3 className="text-gray-500">
                 Total Paid
               </h3>
@@ -417,12 +452,9 @@ function App() {
               <p className="text-3xl font-bold text-purple-600">
                 ₹{totalPaid}
               </p>
-
             </div>
 
-            {/* Overdue */}
             <div className="bg-white p-5 rounded-2xl shadow">
-
               <h3 className="text-gray-500">
                 Overdue Summary
               </h3>
@@ -437,79 +469,11 @@ function App() {
                 {overdueMonths} Month(s)
                 Overdue
               </p>
-
             </div>
 
           </div>
 
-          {/* Filter */}
-          <div className="bg-white p-6 rounded-2xl shadow mb-8">
-
-            <h2 className="text-2xl font-bold mb-4">
-              Filter Time Period
-            </h2>
-
-            <div className="grid md:grid-cols-2 gap-4">
-
-              <select
-                className="p-3 border rounded-xl"
-                onChange={(e) =>
-                  setFromMonth(
-                    e.target.value
-                  )
-                }
-              >
-                <option value="">
-                  Select From Month
-                </option>
-
-                {schedule.map(
-                  (row) => (
-                    <option
-                      key={row.id}
-                      value={
-                        row.month
-                      }
-                    >
-                      {row.month}
-                    </option>
-                  )
-                )}
-
-              </select>
-
-              <select
-                className="p-3 border rounded-xl"
-                onChange={(e) =>
-                  setToMonth(
-                    e.target.value
-                  )
-                }
-              >
-                <option value="">
-                  Select To Month
-                </option>
-
-                {schedule.map(
-                  (row) => (
-                    <option
-                      key={row.id}
-                      value={
-                        row.month
-                      }
-                    >
-                      {row.month}
-                    </option>
-                  )
-                )}
-
-              </select>
-
-            </div>
-
-          </div>
-
-          {/* Table */}
+          {/* TABLE */}
           <div className="overflow-x-auto bg-white rounded-2xl shadow">
 
             <table className="w-full border-collapse">
@@ -540,6 +504,10 @@ function App() {
 
                   <th className="p-3">
                     Interest
+                  </th>
+
+                  <th className="p-3">
+                    Carry Forward Due
                   </th>
 
                   <th className="p-3">
@@ -591,7 +559,6 @@ function App() {
                           }
                         </td>
 
-                        {/* EMI */}
                         <td className="p-3">
 
                           <input
@@ -609,17 +576,22 @@ function App() {
 
                         </td>
 
-                        {/* Principal */}
                         <td className="p-3">
                           ₹{
                             row.principal
                           }
                         </td>
 
-                        {/* Interest */}
                         <td className="p-3">
                           ₹{
                             row.interest
+                          }
+                        </td>
+
+                        {/* Carry Forward */}
+                        <td className="p-3 text-orange-600 font-bold">
+                          ₹{
+                            row.carryForwardDue
                           }
                         </td>
 
@@ -634,15 +606,12 @@ function App() {
                         <td className="p-3 font-bold text-blue-600">
 
                           ₹
-                          {row.status ===
-                          "Overdue"
-                            ? row.balance +
-                              row.interestDue
-                            : row.balance}
+                          {row.balance +
+                            row.interestDue}
 
                         </td>
 
-                        {/* Status */}
+                        {/* STATUS */}
                         <td className="p-3">
 
                           <select
@@ -652,49 +621,13 @@ function App() {
                             }
                             onChange={(
                               e
-                            ) => {
-
-                              const updated =
-                                [
-                                  ...schedule,
-                                ];
-
-                              updated[
-                                originalIndex
-                              ].status =
-                                e.target.value;
-
-                              // Overdue Logic
-                              if (
+                            ) =>
+                              handleStatusChange(
+                                originalIndex,
                                 e.target
-                                  .value ===
-                                "Overdue"
-                              ) {
-
-                                updated[
-                                  originalIndex
-                                ].interestDue =
-                                  updated[
-                                    originalIndex
-                                  ]
-                                    .interest;
-
-                                updated[
-                                  originalIndex
-                                ].principal = 0;
-                              }
-
-                              else {
-
-                                updated[
-                                  originalIndex
-                                ].interestDue = 0;
-                              }
-
-                              setSchedule(
-                                updated
-                              );
-                            }}
+                                  .value
+                              )
+                            }
                           >
 
                             <option>
