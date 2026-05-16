@@ -5,7 +5,6 @@ function App() {
   const [interestRate, setInterestRate] = useState(11);
   const [tenure, setTenure] = useState(12);
 
-  // Editable Full Date
   const [startMonth, setStartMonth] =
     useState("2025-01-01");
 
@@ -14,7 +13,7 @@ function App() {
   const [fromMonth, setFromMonth] = useState("");
   const [toMonth, setToMonth] = useState("");
 
-  // EMI Calculation
+  // EMI Formula
   const calculateEMI = (P, annualRate, N) => {
     const R = annualRate / 12 / 100;
 
@@ -57,16 +56,22 @@ function App() {
 
       data.push({
         id: i + 1,
+
         month: monthDate.toLocaleString("default", {
           month: "short",
           year: "2-digit",
         }),
 
         openingBalance: balance,
-        emi: emi,
-        principal: principal,
-        interest: interest,
+
+        emi,
+
+        principal,
+
+        interest,
+
         balance: Math.round(newBalance),
+
         status: "Paid",
       });
 
@@ -117,7 +122,7 @@ function App() {
     setSchedule(updated);
   };
 
-  // Filter
+  // Filter Schedule
   const filteredSchedule = schedule.filter(
     (row) => {
       if (!fromMonth || !toMonth) return true;
@@ -262,7 +267,7 @@ function App() {
 
       </div>
 
-      {/* Dashboard Cards */}
+      {/* Dashboard */}
       {schedule.length > 0 && (
         <>
 
@@ -409,90 +414,99 @@ function App() {
               <tbody>
 
                 {filteredSchedule.map(
-                  (row, index) => (
+                  (row) => {
 
-                    <tr
-                      key={row.id}
-                      className="text-center border-b"
-                    >
+                    const originalIndex =
+                      schedule.findIndex(
+                        (r) =>
+                          r.id === row.id
+                      );
 
-                      <td className="p-3">
-                        {row.month}
-                      </td>
+                    return (
 
-                      <td className="p-3">
-                        ₹{
-                          row.openingBalance
-                        }
-                      </td>
+                      <tr
+                        key={row.id}
+                        className="text-center border-b"
+                      >
 
-                      <td className="p-3">
+                        <td className="p-3">
+                          {row.month}
+                        </td>
 
-                        <input
-                          type="number"
-                          value={row.emi}
-                          className="border p-2 rounded-lg w-24"
-                          onChange={(e) =>
-                            updateEMI(
-                              index,
-                              e.target.value
-                            )
+                        <td className="p-3">
+                          ₹{
+                            row.openingBalance
                           }
-                        />
+                        </td>
 
-                      </td>
+                        <td className="p-3">
 
-                      <td className="p-3">
-                        ₹{row.principal}
-                      </td>
+                          <input
+                            type="number"
+                            value={row.emi}
+                            className="border p-2 rounded-lg w-24"
+                            onChange={(e) =>
+                              updateEMI(
+                                originalIndex,
+                                e.target.value
+                              )
+                            }
+                          />
 
-                      <td className="p-3">
-                        ₹{row.interest}
-                      </td>
+                        </td>
 
-                      <td className="p-3 font-bold text-blue-600">
-                        ₹{row.balance}
-                      </td>
+                        <td className="p-3">
+                          ₹{row.principal}
+                        </td>
 
-                      <td className="p-3">
+                        <td className="p-3">
+                          ₹{row.interest}
+                        </td>
 
-                        <select
-                          className="border p-2 rounded-lg"
-                          value={row.status}
-                          onChange={(e) => {
-                            const updated = [
-                              ...schedule,
-                            ];
+                        <td className="p-3 font-bold text-blue-600">
+                          ₹{row.balance}
+                        </td>
 
-                            updated[
-                              index
-                            ].status =
-                              e.target.value;
+                        <td className="p-3">
 
-                            setSchedule(
-                              updated
-                            );
-                          }}
-                        >
-                          <option>
-                            Paid
-                          </option>
+                          <select
+                            className="border p-2 rounded-lg"
+                            value={row.status}
+                            onChange={(e) => {
+                              const updated = [
+                                ...schedule,
+                              ];
 
-                          <option>
-                            Pending
-                          </option>
+                              updated[
+                                originalIndex
+                              ].status =
+                                e.target.value;
 
-                          <option>
-                            Overdue
-                          </option>
+                              setSchedule(
+                                updated
+                              );
+                            }}
+                          >
+                            <option>
+                              Paid
+                            </option>
 
-                        </select>
+                            <option>
+                              Pending
+                            </option>
 
-                      </td>
+                            <option>
+                              Overdue
+                            </option>
 
-                    </tr>
+                          </select>
 
-                  )
+                        </td>
+
+                      </tr>
+
+                    );
+                  }
                 )}
 
               </tbody>
