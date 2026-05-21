@@ -405,6 +405,7 @@ function App() {
     });
 
     recalculateSchedule(updated);
+    setBulkEMI("");
   };
 
   // PRINT
@@ -1005,7 +1006,8 @@ function App() {
                 </div>
                 <button
                   onClick={applyBulkEMI}
-                  className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-md transition-all duration-300 hover:scale-[1.02] flex items-center gap-2"
+                  disabled={filteredSchedule.length === 0}
+                  className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-md transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
                 >
                   Apply EMI to Filtered Months
                 </button>
