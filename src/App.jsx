@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -33,6 +33,9 @@ function App() {
 
   const [selectedMonths, setSelectedMonths] =
     useState([""]);
+
+  const [bulkEMI, setBulkEMI] =
+    useState("");
 
   // EMI FORMULA
   const calculateEMI = (
@@ -363,6 +366,47 @@ function App() {
     setToMonth("");
   };
 
+  // APPLY BULK EMI IN FILTERED RANGE
+  const applyBulkEMI = () => {
+
+    if (!bulkEMI || isNaN(bulkEMI)) return;
+
+    const revisedEMIValue = Number(bulkEMI);
+
+    const filteredIds = new Set(
+      filteredSchedule.map((r) => r.id)
+    );
+
+    const updated = schedule.map((row) => {
+
+      if (filteredIds.has(row.id)) {
+
+        const updatedRow = {
+          ...row,
+          emi: revisedEMIValue,
+        };
+
+        if (revisedEMIValue === 0) {
+
+          updatedRow.status = "Overdue";
+        }
+
+        else if (
+          updatedRow.status === "Overdue"
+        ) {
+
+          updatedRow.status = "Paid";
+        }
+
+        return updatedRow;
+      }
+
+      return row;
+    });
+
+    recalculateSchedule(updated);
+  };
+
   // PRINT
   const handlePrint = () => {
 
@@ -581,84 +625,103 @@ function App() {
 
   return (
 
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className={`relative min-h-screen p-6 md:p-8 overflow-hidden transition-all duration-1000 ${
+      totalOverdue > 0 
+        ? "bg-gradient-to-br from-slate-50 via-rose-50/20 to-slate-100" 
+        : "bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-100"
+    }`}>
+      
+      {/* Reactive Floating Ambient Background Blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className={`absolute -top-40 -left-40 w-96 h-96 rounded-full blur-[130px] opacity-40 animate-blob transition-all duration-1000 ${
+          totalOverdue > 0 ? "bg-rose-400" : "bg-blue-400"
+        }`}></div>
+        <div className={`absolute top-1/3 -right-20 w-[450px] h-[450px] rounded-full blur-[150px] opacity-35 animate-blob animation-delay-2000 transition-all duration-1000 ${
+          totalOverdue > 0 ? "bg-amber-300" : "bg-purple-400"
+        }`}></div>
+        <div className={`absolute -bottom-40 left-1/3 w-[400px] h-[400px] rounded-full blur-[130px] opacity-30 animate-blob animation-delay-4000 transition-all duration-1000 ${
+          totalOverdue > 0 ? "bg-red-300" : "bg-emerald-300"
+        }`}></div>
+      </div>
 
-      {/* TITLE */}
-      <h1 className="text-4xl font-bold text-center text-blue-700 mb-8">
-        Loan Account Statement
-      </h1>
+      <div className="relative z-10 max-w-7xl mx-auto">
 
-      {/* SUMMARY */}
-      <div className="bg-white rounded-2xl shadow p-6 mb-8">
+        {/* TITLE */}
+        <h1 className="text-5xl font-extrabold text-center mb-10 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-800">
+          Loan Account Statement
+        </h1>
 
-        <div className="grid md:grid-cols-6 gap-4 text-center">
+        {/* SUMMARY */}
+        <div className="backdrop-blur-xl bg-white/70 rounded-2xl border border-white/40 shadow-xl shadow-slate-100/50 p-6 mb-8 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/50">
 
-          <div>
-            <p className="font-semibold text-gray-500">
-              Sanctioned Amount
-            </p>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
 
-            <p className="text-2xl font-bold text-blue-700">
-              ₹{loanAmount}
-            </p>
-          </div>
+            <div className="backdrop-blur-md bg-white/40 border border-white/20 rounded-xl p-4 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-white/70 flex flex-col justify-between">
+              <p className="text-sm font-semibold text-slate-500 mb-1">
+                Sanctioned Amount
+              </p>
+              <p className="text-2xl font-black text-blue-700">
+                ₹{loanAmount}
+              </p>
+            </div>
 
-          <div>
-            <p className="font-semibold text-gray-500">
-              EMI
-            </p>
+            <div className="backdrop-blur-md bg-white/40 border border-white/20 rounded-xl p-4 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-white/70 flex flex-col justify-between">
+              <p className="text-sm font-semibold text-slate-500 mb-1">
+                EMI
+              </p>
+              <p className="text-2xl font-black text-indigo-600">
+                ₹{originalEMI}
+              </p>
+            </div>
 
-            <p className="text-2xl font-bold text-blue-700">
-              ₹{originalEMI}
-            </p>
-          </div>
+            <div className="backdrop-blur-md bg-white/40 border border-white/20 rounded-xl p-4 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-white/70 flex flex-col justify-between relative overflow-hidden">
+              {totalOverdue > 0 && (
+                <span className="absolute top-2 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+              )}
+              <p className="text-sm font-semibold text-slate-500 mb-1">
+                Int. Due
+              </p>
+              <p className={`text-2xl font-black ${totalOverdue > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                ₹{totalOverdue}
+              </p>
+            </div>
 
-          <div>
-            <p className="font-semibold text-gray-500">
-              Int. Due
-            </p>
+            <div className="backdrop-blur-md bg-white/40 border border-white/20 rounded-xl p-4 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-white/70 flex flex-col justify-between">
+              <p className="text-sm font-semibold text-slate-500 mb-1">
+                ROI
+              </p>
+              <p className="text-2xl font-black text-teal-600">
+                {interestRate}%
+              </p>
+            </div>
 
-            <p className="text-2xl font-bold text-red-600">
-              ₹{totalOverdue}
-            </p>
-          </div>
+            <div className="backdrop-blur-md bg-white/40 border border-white/20 rounded-xl p-4 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-white/70 flex flex-col justify-between">
+              <p className="text-sm font-semibold text-slate-500 mb-1">
+                EMI Start
+              </p>
+              <p className="text-lg font-bold text-slate-700">
+                {startMonth}
+              </p>
+            </div>
 
-          <div>
-            <p className="font-semibold text-gray-500">
-              ROI
-            </p>
+            <div className="backdrop-blur-md bg-white/40 border border-white/20 rounded-xl p-4 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-white/70 flex flex-col justify-between">
+              <p className="text-sm font-semibold text-slate-500 mb-1">
+                Outstanding
+              </p>
+              <p className="text-2xl font-black text-purple-700">
+                ₹{lastBalance}
+              </p>
+            </div>
 
-            <p className="text-2xl font-bold text-blue-700">
-              {interestRate}%
-            </p>
-          </div>
-
-          <div>
-            <p className="font-semibold text-gray-500">
-              EMI Start
-            </p>
-
-            <p className="text-xl font-bold text-blue-700">
-              {startMonth}
-            </p>
-          </div>
-
-          <div>
-            <p className="font-semibold text-gray-500">
-              Outstanding
-            </p>
-
-            <p className="text-2xl font-bold text-purple-700">
-              ₹{lastBalance}
-            </p>
           </div>
 
         </div>
 
-      </div>
-
       {/* LOAN DETAILS */}
-      <div className="bg-white rounded-2xl shadow p-6 mb-8">
+      <div className="backdrop-blur-xl bg-white/70 rounded-2xl border border-white/40 shadow-xl shadow-slate-100/50 p-6 mb-8 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/50">
 
         <h2 className="text-2xl font-bold mb-4">
           Loan Details
@@ -724,7 +787,7 @@ function App() {
       </div>
 
       {/* FILTERS */}
-      <div className="bg-white rounded-2xl shadow p-6 mb-8">
+      <div className="backdrop-blur-xl bg-white/70 rounded-2xl border border-white/40 shadow-xl shadow-slate-100/50 p-6 mb-8 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/50">
 
         <h2 className="text-2xl font-bold mb-4">
           Loan Filters
@@ -916,12 +979,46 @@ function App() {
 
           </div>
 
+          {/* BULK REVISE EMI SECTION */}
+          {schedule.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-slate-200/50">
+              <h3 className="text-xl font-bold mb-3 text-indigo-700 flex items-center gap-2">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-600"></span>
+                </span>
+                Bulk Revise EMI in Filtered Range
+              </h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Enter a new EMI value to apply to all <span className="font-semibold text-indigo-600">{filteredSchedule.length} months</span> currently matching your active filters.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-medium">₹</span>
+                  <input
+                    type="number"
+                    placeholder="New EMI Amount"
+                    value={bulkEMI}
+                    onChange={(e) => setBulkEMI(e.target.value)}
+                    className="pl-7 pr-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 w-44"
+                  />
+                </div>
+                <button
+                  onClick={applyBulkEMI}
+                  className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-md transition-all duration-300 hover:scale-[1.02] flex items-center gap-2"
+                >
+                  Apply EMI to Filtered Months
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
 
       </div>
 
       {/* EMI TABLE */}
-      <div className="bg-white rounded-3xl shadow p-6 overflow-auto">
+      <div className="backdrop-blur-xl bg-white/70 rounded-3xl border border-white/40 shadow-xl shadow-slate-100/50 p-6 overflow-auto transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/50">
 
         <h2 className="text-3xl font-bold text-blue-700 mb-6">
           EMI Schedule
@@ -1111,6 +1208,8 @@ function App() {
           </div>
 
         </div>
+
+      </div>
 
       </div>
 
